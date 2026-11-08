@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DarkIO</string>
+    <string name="home_all_apps">alle apps</string>
+    <string name="hint_swipe_up">// swipe op for alle apps</string>
 </resources>

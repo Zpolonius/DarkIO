@@ -1,6 +1,7 @@
 package app.darkio.data
 
 import android.content.Context
+import android.content.pm.LauncherActivityInfo
 import android.content.pm.LauncherApps
 import android.os.Process
 import android.os.UserHandle
@@ -13,7 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class AppEntry(val id: String, val label: String)
+/** [info] er null kun i tests med falske apps. */
+data class AppEntry(val id: String, val label: String, val info: LauncherActivityInfo? = null)
 
 fun appId(packageName: String, activity: String, userSerial: Long): String =
     "$packageName/$activity#$userSerial"
@@ -41,6 +43,11 @@ class AppRepository(context: Context, private val scope: CoroutineScope) {
 
     fun stop() = launcherApps.unregisterCallback(callback)
 
+    fun launch(app: AppEntry) {
+        val info = app.info ?: return
+        scope.launch(Dispatchers.IO) { launcherApps.startMainActivity(info.componentName, info.user, null, null) }
+    }
+
     private fun refresh() {
         job?.cancel()
         job = scope.launch {
@@ -48,8 +55,8 @@ class AppRepository(context: Context, private val scope: CoroutineScope) {
                 val user = Process.myUserHandle()
                 val serial = userManager.getSerialNumberForUser(user)
                 launcherApps.getActivityList(null, user)
-                    .map { AppEntry(appId(it.applicationInfo.packageName, it.componentName.className, serial), it.label.toString()) }
-                    .sortedBy { it.label.lowercase() }
+                    .map { AppEntry(appId(it.applicationInfo.packageName, it.componentName.className, serial), it.label.toString(), it) }
+                    .sortedWith(appOrder)
             }
             _apps.value = list
         }

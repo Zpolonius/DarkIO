@@ -52,12 +52,18 @@ object DarkIOSpace {
     val TopInset = 60.dp
 }
 
+object DarkIOMotion {
+    const val DrawerMs = 180
+}
+
 object DarkIOSize {
     val TouchMin = 44.dp
     val IconTile = 56.dp
     val IconTileSm = 44.dp
     val CardChip = 40.dp
     val FieldHeight = 56.dp
+    val GripWidth = 40.dp
+    val GripHeight = 4.dp
     val GlyphStroke = 1.9.dp
 }
 
