@@ -65,6 +65,9 @@ object DarkIOSize {
     val GripWidth = 40.dp
     val GripHeight = 4.dp
     val GlyphStroke = 1.9.dp
+    val GlyphSize = 24.dp
+    val TouchTarget = 48.dp
+    val LineStroke = 1.dp
 }
 
 private val Display = FontFamily(

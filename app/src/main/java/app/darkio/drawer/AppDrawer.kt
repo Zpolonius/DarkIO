@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.drawable.toBitmap
 import app.darkio.R
+import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.ui.onVerticalSwipe
 import app.darkio.ui.theme.DarkIOColors
@@ -56,7 +57,7 @@ import app.darkio.ui.theme.DarkIOType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** App-skuffe: 4-kolonners gitter og søgning, bundforankret. [onDismiss] kaldes ved swipe ned, [onHide] ved langt tryk på en app. */
+/** App-skuffe: 4-kolonners gitter, søgning og kategori-bar, bundforankret. [onDismiss] kaldes ved swipe ned, [onHide] ved langt tryk på en app. */
 @Composable
 fun AppDrawer(
     apps: List<AppEntry>,
@@ -67,6 +68,11 @@ fun AppDrawer(
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf(AppCategory.ALL) }
+    val filteredApps = remember(apps, selectedCategory) {
+        if (selectedCategory == AppCategory.ALL) apps
+        else apps.filter { it.category == selectedCategory }
+    }
     val results = remember(query, apps) { searchApps(apps, query) }
     val swipePx = with(LocalDensity.current) { DarkIOSize.TouchMin.toPx() }
     Column(
@@ -87,13 +93,24 @@ fun AppDrawer(
             Box(Modifier.size(width = DarkIOSize.GripWidth, height = DarkIOSize.GripHeight).clip(DarkIOShapes.Pill).background(DarkIOColors.LineStrong))
         }
         if (query.isBlank()) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S1)
+                    .testTag("drawerHeader"),
+            ) {
+                BasicText(
+                    stringResource(R.string.drawer_header, selectedCategory.slug, filteredApps.size),
+                    style = DarkIOType.Label.copy(color = DarkIOColors.InkMuted),
+                )
+            }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = false).testTag("drawerGrid"),
                 contentPadding = PaddingValues(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S4),
                 verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S3),
             ) {
-                items(apps, key = { it.id }) { app ->
+                items(filteredApps, key = { it.id }) { app ->
                     AppTile(app, onClick = { onLaunch(app) }, onLongClick = { onHide(app) })
                 }
             }
@@ -115,6 +132,17 @@ fun AppDrawer(
         ) {
             BasicText(stringResource(R.string.hidden_apps_title), style = DarkIOType.Button.copy(color = DarkIOColors.InkSoft))
         }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(DarkIOSize.LineStroke)
+                .background(DarkIOColors.Line),
+        )
+        CategoryBar(
+            selectedCategory = selectedCategory,
+            onSelectCategory = { selectedCategory = it },
+            modifier = Modifier.fillMaxWidth().testTag("categoryBar"),
+        )
     }
 }
 

@@ -10,4 +10,12 @@
     <string name="drawer_hide_app">Skjul app</string>
     <string name="search_placeholder">søg apps</string>
     <string name="search_no_results">// ingen apps fundet_</string>
+    <string name="category_all">Alle</string>
+    <string name="category_social">Social</string>
+    <string name="category_game">Spil</string>
+    <string name="category_photo">Foto</string>
+    <string name="category_work">Arbejde</string>
+    <string name="category_tool">Værktøj</string>
+    <string name="category_other">Andet</string>
+    <string name="drawer_header">~/apps/%1$s · %2$d stk</string>
 </resources>
