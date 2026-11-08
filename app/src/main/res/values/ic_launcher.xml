@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Baggrund taget fra selve logoet, så kanten ikke ses. Logoets farver er bevidst ikke tilpasset tokens.json. -->
+    <color name="ic_launcher_background">#FF191C20</color>
+</resources>
