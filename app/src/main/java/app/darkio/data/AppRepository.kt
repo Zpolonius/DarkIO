@@ -19,7 +19,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** [info] er null kun i tests med falske apps. */
-data class AppEntry(val id: String, val label: String, val info: LauncherActivityInfo? = null)
+data class AppEntry(
+    val id: String,
+    val label: String,
+    val info: LauncherActivityInfo? = null,
+    val category: AppCategory = appCategoryOf(info?.applicationInfo),
+)
 
 fun appId(packageName: String, activity: String, userSerial: Long): String =
     "$packageName/$activity#$userSerial"
