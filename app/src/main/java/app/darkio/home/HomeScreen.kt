@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemGestures
@@ -27,6 +28,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +42,9 @@ import app.darkio.R
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
 import app.darkio.drawer.AppDrawer
+import app.darkio.drawer.SearchField
+import app.darkio.drawer.SearchResultsPane
+import app.darkio.drawer.searchApps
 import app.darkio.settings.HiddenAppsScreen
 import app.darkio.ui.onVerticalSwipe
 import app.darkio.ui.theme.DarkIOColors
@@ -59,12 +64,16 @@ fun HomeScreen(
     onSetHidden: (AppEntry, Boolean) -> Unit,
 ) {
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val results = remember(query, apps.visible) { searchApps(apps.visible, query) }
     val openDrawer = {
         if (!hintSeen) onHintSeen()
         drawerOpen = true
     }
     var hiddenOpen by rememberSaveable { mutableStateOf(false) }
-    BackHandler(enabled = drawerOpen) { drawerOpen = false }
+    BackHandler(enabled = drawerOpen || query.isNotEmpty()) {
+        if (drawerOpen) drawerOpen = false else query = ""
+    }
     BackHandler(enabled = hiddenOpen) { hiddenOpen = false }
     // Skuffen og hjem komponeres ikke bag skærmen, så tryk og TalkBack ikke når dem.
     if (hiddenOpen) {
@@ -77,28 +86,46 @@ fun HomeScreen(
 
     BoxWithConstraints(Modifier.fillMaxSize().background(DarkIOColors.Bg)) {
         // Swipe-området slutter over systemGestures-zonen, så swipe op ikke kolliderer med Hjem-gesten.
-        Box(
+        BoxWithConstraints(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom))
                 .onVerticalSwipe { if (it < -swipePx) openDrawer() else if (it > swipePx) drawerOpen = false },
         ) {
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = DarkIOSpace.S5, vertical = DarkIOSpace.S5)) {
-                if (!hintSeen) {
-                    BasicText(stringResource(R.string.hint_swipe_up), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft))
-                    Spacer(Modifier.height(DarkIOSpace.S3))
+            Column(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .heightIn(max = maxHeight / 2)
+                    .imePadding()
+                    .padding(horizontal = DarkIOSpace.S5, vertical = DarkIOSpace.S5),
+            ) {
+                if (query.isBlank()) {
+                    if (!hintSeen) {
+                        BasicText(stringResource(R.string.hint_swipe_up), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft))
+                        Spacer(Modifier.height(DarkIOSpace.S3))
+                    }
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(DarkIOSize.FieldHeight)
+                            .clip(DarkIOShapes.Md)
+                            .background(DarkIOColors.Surface)
+                            .clickable(role = Role.Button, onClick = openDrawer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        BasicText(stringResource(R.string.home_all_apps), style = DarkIOType.Button.copy(color = DarkIOColors.Ink))
+                    }
+                } else {
+                    SearchResultsPane(results, onLaunch, Modifier.weight(1f, fill = false))
                 }
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(DarkIOSize.FieldHeight)
-                        .clip(DarkIOShapes.Md)
-                        .background(DarkIOColors.Surface)
-                        .clickable(role = Role.Button, onClick = openDrawer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    BasicText(stringResource(R.string.home_all_apps), style = DarkIOType.Button.copy(color = DarkIOColors.Ink))
-                }
+                Spacer(Modifier.height(DarkIOSpace.S2))
+                SearchField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    onSearch = { results.firstOrNull()?.let(onLaunch) },
+                    background = DarkIOColors.SurfaceGlass,
+                )
             }
         }
         AnimatedVisibility(
@@ -113,7 +140,7 @@ fun HomeScreen(
                 onHide = { onSetHidden(it, true) },
                 onShowHidden = { hiddenOpen = true },
                 onDismiss = { drawerOpen = false },
-                modifier = Modifier.heightIn(max = maxHeight / 2),
+                modifier = Modifier.imePadding().heightIn(max = maxHeight / 2),
             )
         }
     }
