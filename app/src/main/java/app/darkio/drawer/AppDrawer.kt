@@ -26,7 +26,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +43,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.drawable.toBitmap
 import app.darkio.R
 import app.darkio.data.AppEntry
@@ -51,7 +56,7 @@ import app.darkio.ui.theme.DarkIOType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** App-skuffe: 4-kolonners gitter, bundforankret. [onDismiss] kaldes ved swipe ned, [onHide] ved langt tryk på en app. */
+/** App-skuffe: 4-kolonners gitter og søgning, bundforankret. [onDismiss] kaldes ved swipe ned, [onHide] ved langt tryk på en app. */
 @Composable
 fun AppDrawer(
     apps: List<AppEntry>,
@@ -61,6 +66,8 @@ fun AppDrawer(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val results = remember(query, apps) { searchApps(apps, query) }
     val swipePx = with(LocalDensity.current) { DarkIOSize.TouchMin.toPx() }
     Column(
         modifier
@@ -79,16 +86,26 @@ fun AppDrawer(
         ) {
             Box(Modifier.size(width = DarkIOSize.GripWidth, height = DarkIOSize.GripHeight).clip(DarkIOShapes.Pill).background(DarkIOColors.LineStrong))
         }
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = false).testTag("drawerGrid"),
-            contentPadding = PaddingValues(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S4),
-            verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S3),
-        ) {
-            items(apps, key = { it.id }) { app ->
-                AppTile(app, onClick = { onLaunch(app) }, onLongClick = { onHide(app) })
+        if (query.isBlank()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false).testTag("drawerGrid"),
+                contentPadding = PaddingValues(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S4),
+                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S3),
+            ) {
+                items(apps, key = { it.id }) { app ->
+                    AppTile(app, onClick = { onLaunch(app) }, onLongClick = { onHide(app) })
+                }
             }
+        } else {
+            SearchResultsPane(results, onLaunch, Modifier.weight(1f, fill = false))
         }
+        SearchField(
+            query = query,
+            onQueryChange = { query = it },
+            onSearch = { results.firstOrNull()?.let(onLaunch) },
+            modifier = Modifier.padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+        )
         Box(
             Modifier
                 .fillMaxWidth()
@@ -123,15 +140,15 @@ private fun AppTile(app: AppEntry, onClick: () -> Unit, onLongClick: () -> Unit)
 
 /** Ikonet hentes uden for main-tråden; falske apps (uden info) får et tomt felt. */
 @Composable
-private fun AppIcon(app: AppEntry) {
-    val px = with(LocalDensity.current) { DarkIOSize.IconTile.roundToPx() }
+internal fun AppIcon(app: AppEntry, size: Dp = DarkIOSize.IconTile) {
+    val px = with(LocalDensity.current) { size.roundToPx() }
     val dpi = LocalConfiguration.current.densityDpi
     val icon by produceState<ImageBitmap?>(null, app.id) {
         value = withContext(Dispatchers.IO) {
             app.info?.getIcon(dpi)?.toBitmap(px, px)?.asImageBitmap()
         }
     }
-    Box(Modifier.size(DarkIOSize.IconTile).clip(DarkIOShapes.Lg).background(DarkIOColors.Surface)) {
+    Box(Modifier.size(size).clip(DarkIOShapes.Lg).background(DarkIOColors.Surface)) {
         icon?.let { Image(it, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
     }
 }

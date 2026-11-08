@@ -8,4 +8,6 @@
     <string name="hidden_apps_empty">Ingen skjulte apps</string>
     <string name="hidden_apps_show_again">Vis igen</string>
     <string name="drawer_hide_app">Skjul app</string>
+    <string name="search_placeholder">søg apps</string>
+    <string name="search_no_results">// ingen apps fundet_</string>
 </resources>
