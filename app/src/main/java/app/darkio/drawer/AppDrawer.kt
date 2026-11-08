@@ -3,6 +3,7 @@ package app.darkio.drawer
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,9 +36,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.graphics.drawable.toBitmap
+import app.darkio.R
 import app.darkio.data.AppEntry
 import app.darkio.ui.onVerticalSwipe
 import app.darkio.ui.theme.DarkIOColors
@@ -47,11 +51,13 @@ import app.darkio.ui.theme.DarkIOType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** App-skuffe: 4-kolonners gitter, bundforankret. [onDismiss] kaldes ved swipe ned. */
+/** App-skuffe: 4-kolonners gitter, bundforankret. [onDismiss] kaldes ved swipe ned, [onHide] ved langt tryk på en app. */
 @Composable
 fun AppDrawer(
     apps: List<AppEntry>,
     onLaunch: (AppEntry) -> Unit,
+    onHide: (AppEntry) -> Unit,
+    onShowHidden: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,21 +81,33 @@ fun AppDrawer(
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
-            modifier = Modifier.fillMaxWidth().testTag("drawerGrid"),
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = false).testTag("drawerGrid"),
             contentPadding = PaddingValues(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S4),
             verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S3),
         ) {
             items(apps, key = { it.id }) { app ->
-                AppTile(app, onClick = { onLaunch(app) })
+                AppTile(app, onClick = { onLaunch(app) }, onLongClick = { onHide(app) })
             }
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = DarkIOSize.TouchMin)
+                .clickable(role = Role.Button, onClick = onShowHidden),
+            contentAlignment = Alignment.Center,
+        ) {
+            BasicText(stringResource(R.string.hidden_apps_title), style = DarkIOType.Button.copy(color = DarkIOColors.InkSoft))
         }
     }
 }
 
 @Composable
-private fun AppTile(app: AppEntry, onClick: () -> Unit) {
+private fun AppTile(app: AppEntry, onClick: () -> Unit, onLongClick: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(vertical = DarkIOSpace.S1),
+        Modifier
+            .fillMaxWidth()
+            .combinedClickable(role = Role.Button, onLongClickLabel = stringResource(R.string.drawer_hide_app), onLongClick = onLongClick, onClick = onClick)
+            .padding(vertical = DarkIOSpace.S1),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         AppIcon(app)

@@ -47,10 +47,15 @@ class HomeAndManifestTest {
 
     @Test
     fun installedAppsAreListedOnFirstLoad() = kotlinx.coroutines.runBlocking {
-        val repo = app.darkio.data.AppRepository(context, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO))
+        val db = androidx.room.Room.inMemoryDatabaseBuilder(context, app.darkio.data.AppDatabase::class.java).build()
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        val repo = app.darkio.data.AppRepository(context, scope, db.choices())
         InstrumentationRegistry.getInstrumentation().runOnMainSync { repo.start() }
-        val apps = kotlinx.coroutines.withTimeout(10_000) { repo.apps.first { it.isNotEmpty() } }
+        val apps = kotlinx.coroutines.withTimeout(10_000) { repo.lists.first { it.visible.isNotEmpty() }.visible }
         InstrumentationRegistry.getInstrumentation().runOnMainSync { repo.stop() }
+        scope.coroutineContext[kotlinx.coroutines.Job]!!.cancel()
+        scope.coroutineContext[kotlinx.coroutines.Job]!!.join()
+        db.close()
         assertTrue(apps.any { it.id.startsWith("app.darkio/app.darkio.MainActivity#") })
         assertTrue(apps.map { it.id }.distinct().size == apps.size)
     }

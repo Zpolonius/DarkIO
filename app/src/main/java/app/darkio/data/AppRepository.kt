@@ -10,7 +10,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -20,12 +24,13 @@ data class AppEntry(val id: String, val label: String, val info: LauncherActivit
 fun appId(packageName: String, activity: String, userSerial: Long): String =
     "$packageName/$activity#$userSerial"
 
-/** Launchable apps of the current profile. Nothing is persisted. */
-class AppRepository(context: Context, private val scope: CoroutineScope) {
+/** Launchable apps of the current profile, split into visible and hidden by the user's choices in [choices]. */
+class AppRepository(context: Context, private val scope: CoroutineScope, private val choices: AppChoiceDao) {
     private val launcherApps = context.getSystemService(LauncherApps::class.java)
     private val userManager = context.getSystemService(UserManager::class.java)
-    private val _apps = MutableStateFlow<List<AppEntry>>(emptyList())
-    val apps: StateFlow<List<AppEntry>> = _apps
+    private val installed = MutableStateFlow<List<AppEntry>>(emptyList())
+    val lists: StateFlow<AppLists> = combine(installed, choices.hidden().map { rows -> rows.map { appId(it.packageName, it.activity, it.userSerial) }.toSet() }, ::splitApps)
+        .stateIn(scope, SharingStarted.Eagerly, AppLists(emptyList(), emptyList()))
     private var job: Job? = null
 
     private val callback = object : LauncherApps.Callback() {
@@ -48,6 +53,14 @@ class AppRepository(context: Context, private val scope: CoroutineScope) {
         scope.launch(Dispatchers.IO) { launcherApps.startMainActivity(info.componentName, info.user, null, null) }
     }
 
+    fun setHidden(app: AppEntry, hidden: Boolean) {
+        val info = app.info ?: return
+        scope.launch(Dispatchers.IO) {
+            val serial = userManager.getSerialNumberForUser(info.user)
+            choices.setHidden(info.componentName.packageName, info.componentName.className, serial, hidden)
+        }
+    }
+
     private fun refresh() {
         job?.cancel()
         job = scope.launch {
@@ -58,7 +71,7 @@ class AppRepository(context: Context, private val scope: CoroutineScope) {
                     .map { AppEntry(appId(it.applicationInfo.packageName, it.componentName.className, serial), it.label.toString(), it) }
                     .sortedWith(appOrder)
             }
-            _apps.value = list
+            installed.value = list
         }
     }
 }
