@@ -38,7 +38,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
 import app.darkio.data.AppEntry
+import app.darkio.data.AppLists
 import app.darkio.drawer.AppDrawer
+import app.darkio.settings.HiddenAppsScreen
 import app.darkio.ui.onVerticalSwipe
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOMotion
@@ -49,13 +51,26 @@ import app.darkio.ui.theme.DarkIOType
 
 /** Hjemskærm med knap og swipe op til app-skuffen. [onHintSeen] kaldes første gang skuffen åbnes. */
 @Composable
-fun HomeScreen(apps: List<AppEntry>, hintSeen: Boolean, onHintSeen: () -> Unit, onLaunch: (AppEntry) -> Unit) {
+fun HomeScreen(
+    apps: AppLists,
+    hintSeen: Boolean,
+    onHintSeen: () -> Unit,
+    onLaunch: (AppEntry) -> Unit,
+    onSetHidden: (AppEntry, Boolean) -> Unit,
+) {
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     val openDrawer = {
         if (!hintSeen) onHintSeen()
         drawerOpen = true
     }
+    var hiddenOpen by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
+    BackHandler(enabled = hiddenOpen) { hiddenOpen = false }
+    // Skuffen og hjem komponeres ikke bag skærmen, så tryk og TalkBack ikke når dem.
+    if (hiddenOpen) {
+        HiddenAppsScreen(apps.hidden, onShowAgain = { onSetHidden(it, false) })
+        return
+    }
     val swipePx = with(LocalDensity.current) { DarkIOSize.TouchMin.toPx() }
     val motion = tween<IntOffset>(DarkIOMotion.DrawerMs)
     val fade = tween<Float>(DarkIOMotion.DrawerMs)
@@ -93,8 +108,10 @@ fun HomeScreen(apps: List<AppEntry>, hintSeen: Boolean, onHintSeen: () -> Unit, 
             exit = slideOutVertically(motion) { it } + fadeOut(fade),
         ) {
             AppDrawer(
-                apps = apps,
+                apps = apps.visible,
                 onLaunch = onLaunch,
+                onHide = { onSetHidden(it, true) },
+                onShowHidden = { hiddenOpen = true },
                 onDismiss = { drawerOpen = false },
                 modifier = Modifier.heightIn(max = maxHeight / 2),
             )

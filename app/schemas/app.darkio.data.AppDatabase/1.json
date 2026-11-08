@@ -1,0 +1,61 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "e37fc4fc3480e2af59f7259abe82c980",
+    "entities": [
+      {
+        "tableName": "app_choice",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packageName` TEXT NOT NULL, `activity` TEXT NOT NULL, `userSerial` INTEGER NOT NULL, `hidden` INTEGER NOT NULL, `customCategory` TEXT, `favoriteSlot` INTEGER, PRIMARY KEY(`packageName`, `activity`, `userSerial`))",
+        "fields": [
+          {
+            "fieldPath": "packageName",
+            "columnName": "packageName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activity",
+            "columnName": "activity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userSerial",
+            "columnName": "userSerial",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hidden",
+            "columnName": "hidden",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customCategory",
+            "columnName": "customCategory",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "favoriteSlot",
+            "columnName": "favoriteSlot",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "packageName",
+            "activity",
+            "userSerial"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e37fc4fc3480e2af59f7259abe82c980')"
+    ]
+  }
+}

@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.lifecycleScope
+import app.darkio.data.AppDatabase
 import app.darkio.data.AppRepository
 import app.darkio.data.darkIoPrefs
 import app.darkio.data.hintSeen
@@ -19,15 +20,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        apps = AppRepository(this, lifecycleScope)
+        apps = AppRepository(this, lifecycleScope, AppDatabase.open(this).choices())
         setContent {
-            val list = apps.apps.collectAsState().value
+            val list = apps.lists.collectAsState().value
             val hintSeen = darkIoPrefs.hintSeen().collectAsState(initial = true).value
             HomeScreen(
                 apps = list,
                 hintSeen = hintSeen,
                 onHintSeen = { lifecycleScope.launch { darkIoPrefs.markHintSeen() } },
                 onLaunch = apps::launch,
+                onSetHidden = apps::setHidden,
             )
         }
     }

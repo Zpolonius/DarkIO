@@ -14,6 +14,7 @@ import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeUp
 import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.data.AppEntry
+import app.darkio.data.AppLists
 import app.darkio.home.HomeScreen
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -29,7 +30,7 @@ class DrawerUiTest {
     private val apps = (1..200).map { AppEntry("id$it", "App %03d".format(it)) }
 
     private fun show(hintSeen: Boolean = true) = rule.setContent {
-        HomeScreen(apps = apps, hintSeen = hintSeen, onHintSeen = {}, onLaunch = {})
+        HomeScreen(apps = AppLists(apps, emptyList()), hintSeen = hintSeen, onHintSeen = {}, onLaunch = {}, onSetHidden = { _, _ -> })
     }
 
     /** Alle trykbare elementer skal ligge under skærmens midte. */
