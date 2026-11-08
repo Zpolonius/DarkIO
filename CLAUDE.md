@@ -18,7 +18,7 @@ Krav: `docs/DarkIO – kravspecifikation v1.md` (F1–F21, N1–N11). Design: `d
 
 ## Regler
 - Minimal kode: ingen abstraktion før den bruges to steder, ingen interfaces med kun én implementering, constructor-injektion i hånden (ingen Hilt/DI-bibliotek).
-- Afhængigheder: kun Compose, Room, DataStore, Coroutines, Health Connect-klient (+ JUnit, Turbine, Compose UI-test). Ingen netværksbibliotek, ingen INTERNET-tilladelse, ingen QUERY_ALL_PACKAGES.
+- Afhængigheder: kun Compose, Room, DataStore, Coroutines, Health Connect-klient (+ JUnit, Turbine, Compose UI-test; LeakCanary kun i debug, Macrobenchmark kun i et `:benchmark`-testmodul). Ingen netværksbibliotek, ingen INTERNET-tilladelse, ingen QUERY_ALL_PACKAGES. Tilladelser: kun N4-listen.
 - Hver skærm bygges fra `docs/tokens.json` via DarkIOColors/DarkIOType/DarkIOShapes (og DarkIOSpace/DarkIOSize). Ingen hårdkodede farver, størrelser eller fonte i skærmkode. Mangler en værdi: tilføj den til tokens.json først, derefter til DarkIOTheme.kt (TokensTest tjekker farverne).
 - Ydelse: intet arbejde på main-tråden ud over UI (I/O, PackageManager, Room, DataStore, Health Connect på `Dispatchers.IO`/`Default`), lister med stabile keys (`key = { it.id }`), intet baggrundsarbejde (ingen WorkManager, services eller alarmer; data hentes når hjemskærmen vises).
 - Apps identificeres af pakkenavn + aktivitet + brugerprofil, aldrig af navn. Room-migrationer må aldrig slette brugerdata.

@@ -102,7 +102,7 @@ Hjemskærmen viser brugerens egen baggrund, fx et familiebillede. Android tegner
 
 ## Til udviklingen (Jetpack Compose)
 
-Fonte lægges i appen (`res/font/`, begge er OFL-licenserede) og hentes ikke over nettet. Så holder DarkIO sig til kravet om, at kun vejret går på nettet.
+Fonte lægges i appen (`res/font/`, begge er OFL-licenserede) og hentes ikke over nettet. DarkIO har ingen internetadgang (N5).
 
 ```kotlin
 object DarkIOColors {

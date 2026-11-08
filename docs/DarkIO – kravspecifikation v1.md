@@ -47,7 +47,7 @@ Tilbage og Hjem fører altid tilbage til hjemskærmen, og skuffen lukker ved swi
 | F13 | Indstillinger | Accentfarve, kort til/fra, træningsprogram, skridtmål, skjulte apps, nulstil alt | UI-test |
 | F14 | Live opdatering | En app du installerer eller fjerner, dukker op eller forsvinder inden for 2 sekunder uden genstart | Manuel (installér/afinstallér en app) |
 | F15 | Tommelfinger først | Alt du trykker på dagligt (favoritter, søgning, kategorier, app-menu, tilbage) ligger i nederste halvdel af skærmen. Øverste halvdel er kun til at kigge på: ur, kort og overskrifter | UI-test der tjekker, at alle trykbare elementer på hjem, skuffe og søgning ligger under skærmens midte + manuel test med én hånd |
-| F16 | Fokus-kort | Kompakt på hjemskærmen: skærmtid i dag og antal oplåsninger. Ved tryk: forskel mod i går, en søjle pr. time og top 3 apps. Data hentes med UsageStatsManager, når hjemskærmen vises, ikke i baggrunden. Uden adgang vises „giv adgang“, der åbner Android → Adgang til brugsdata. Tryk på kortet åbner Digital Wellbeing | Unit (summering pr. time, skift ved midnat, sommertid) + manuel: giv og fjern adgang, sammenlign tallet med Digital Wellbeing |
+| F16 | Fokus-kort | Kompakt på hjemskærmen: skærmtid i dag og antal oplåsninger. Ved tryk: forskel mod i går, en søjle pr. time og top 3 apps. Data hentes med UsageStatsManager, når hjemskærmen vises, ikke i baggrunden. Uden adgang vises „giv adgang“, der åbner Android → Adgang til brugsdata. Detaljevisningen har et link til Digital Wellbeing | Unit (summering pr. time, skift ved midnat, sommertid) + manuel: giv og fjern adgang, sammenlign tallet med Digital Wellbeing |
 | F17 | Dagens vibe-coding-tip | Viser ét tip om dagen fra en fast liste på mindst 60 tips, der ligger i appen. Samme tip hele dagen, nyt efter midnat, ingen gentagelse før listen er brugt. Langt tryk kopierer tippet. På byg-siden vises tippet stort med en kopier-knap og de to seneste tips | Unit (samme tip hele dagen, skift ved midnat, ingen gentagelse) + UI-test |
 | F18 | Forbrændt + genvej til FoodAdvisor | Viser forbrændte kalorier i dag fra Health Connect (READ\_TOTAL\_CALORIES\_BURNED). Hele kortet er et link med ↗ og „+ log mad“, der åbner FoodAdvisor. Indtag og kcal tilbage vises ikke, fordi FoodAdvisor ikke deler ernæring med Health Connect. Er FoodAdvisor ikke installeret, skjules „+ log mad“ | Unit (dagens sum, skift ved midnat) + manuel: tallet matcher Fitbit/Health Connect, tryk åbner FoodAdvisor |
 | F19 | Skrivemaskine-effekt | Dagens tip, velkomsten og tomme tilstande skrives frem tegn for tegn (16 ms pr. tegn, højst 1,5 s) med en blinkende accent-markør. Kører én gang pr. tekst pr. dag; et tryk springer over. Med „Fjern animationer“ slået til vises teksten straks. Skærmlæseren får hele teksten med det samme. Bruges aldrig på app-navne, søgeresultater, tal eller fejl | UI-test (fuld tekst efter 1,5 s, tryk viser alt, kun én gang pr. dag, ingen animation med animationer slået fra) + TalkBack-test |
@@ -63,11 +63,11 @@ En launcher kører hele tiden og ser alle dine apps, så hastighed og privatliv 
 | N1 | Hastighed | Dashboard vises under 500 ms efter Hjem; skuffen åbner under 150 ms og scroller uden hak | Macrobenchmark-test + manuel på telefon |
 | N2 | Hukommelse | Ingen hukommelseslæk efter 50 åbn/luk af skuffen | LeakCanary i debug-build |
 | N3 | Stabilitet | Fejler et kort (fx skridt), vises en fejltekst i kortet, og resten af hjemskærmen virker | Unit-test der kaster fejl i hvert kort |
-| N4 | Tilladelser | Kun: kalender, udvid statuslinje, adgang til brugsdata (PACKAGE\_USAGE\_STATS) og Health Connect READ\_STEPS og READ\_TOTAL\_CALORIES\_BURNED. Hver tilladelse spørges først, når kortet slås til. Ingen INTERNET. **Ingen** QUERY\_ALL\_PACKAGES | Security-agent læser manifest |
+| N4 | Tilladelser | Kun: kalender, udvid statuslinje, adgang til brugsdata (PACKAGE\_USAGE\_STATS) og Health Connect READ\_STEPS og READ\_TOTAL\_CALORIES\_BURNED, samt REQUEST\_DELETE\_PACKAGES (gives ved installation; Android viser altid sin egen bekræftelse ved afinstallation). Hver tilladelse spørges først, når kortet slås til. Ingen INTERNET. **Ingen** QUERY\_ALL\_PACKAGES | Security-agent læser manifest |
 | N5 | Privatliv | Intet forlader telefonen: DarkIO har ingen internetadgang. Sundheds-, kalender- og brugsdata læses kun og gemmes ikke af DarkIO. Ingen analytics eller reklame-SDK’er | Security-agent gennemgår afhængigheder og netværkskald |
 | N7 | Ærlighed | „Skjul apps“ er en oprydning, ikke en lås. Det står i appen | UI/UX-agent |
 | N8 | Tilgængelighed | Trykflader mindst 48 dp, kontrast mindst 4,5:1, TalkBack-labels, følger systemets skriftstørrelse og „reducer animationer“ | Accessibility Scanner + UI-test med stor skrift |
-| N9 | Hardening | Release-build: R8 slået til, ikke debuggable, ingen ukrypteret HTTP, kun hjem-aktiviteten er eksporteret | Security-agent læser manifest og build-fil |
+| N9 | Hardening | Release-build: R8 slået til, ikke debuggable, ingen ukrypteret HTTP, kun hjem-aktiviteten er eksporteret, plus den aktivitet Health Connect kræver for at vise, hvad adgangen bruges til | Security-agent læser manifest og build-fil |
 | N10 | Batteri | Intet baggrundsarbejde. Kortene opdateres kun, når hjemskærmen vises | Manuel med Battery Historian eller indstillinger → batteri |
 | N11 | Pixel og Android 16 | Tegner edge-to-edge (påkrævet i Android 16), men alt trykbart holder afstand til systemets gesture-zone nederst. Swipe op til skuffen starter over den zone, så den ikke kolliderer med Androids egen Hjem-gesture | UI-test med gesture-navigation på Pixel 10-emulator + manuel på telefonen |
 
@@ -98,7 +98,7 @@ Kotlin og Jetpack Compose i ét app-modul, delt i fire lag, så hver bygge-agent
 
 - **App-listen** hentes med LauncherApps, og manifestet erklærer en `<queries>`-blok for startbare apps i stedet for den brede QUERY\_ALL\_PACKAGES.
 - **Afhængigheder** holdes på et minimum: Compose, Room, DataStore, Coroutines og Health Connect-klienten. Intet netværksbibliotek. Ingen analytics eller reklame-SDK’er (N5).
-- **Tests:** JUnit og Turbine til logik, Compose UI-test til skærme, Macrobenchmark til hastighed (N1), LeakCanary kun i debug (N2).
+- **Tests:** JUnit og Turbine til logik, Compose UI-test til skærme, Macrobenchmark til hastighed (N1) i et separat `:benchmark`-testmodul, LeakCanary kun i debug (N2).
 
 **Design:** alle farver, fonte, afstande og radier kommer fra [DarkIO Design System](https://claude.ai/artifact/VrFv8skBrNACPQeoAPGR2g), som også har de færdige Compose-objekter. Fontene lægges i appen og hentes ikke over nettet (N5). En værdi, der ikke står der, tilføjes først til designsystemet.
 
@@ -139,7 +139,7 @@ Arbejdet deles i fire bygge-agenter og tre test-agenter. Test-agenterne har ikke
 **Åbne spørgsmål**
 
 - [x] Afklaret: Pixel 10 med Android 16.
-- [x] Afklaret: FoodAdvisor skriver ikke ernæring til Health Connect (kun vægt). F18 viser derfor forbrændte kalorier med genvej til FoodAdvisor.
+- [x] Afklaret: FoodAdvisor skriver ikke ernæring til Health Connect (kun vægt). F18 viser derfor forbrændte kalorier med genvej til FoodAdvisor (Foodvisor, pakke `io.foodvisor.foodvisor`).
 - [x] Afklaret: dobbelttryk-lås er ikke med i v1.
 - [x] Afklaret: arbejdsprofil findes, men understøttes ikke i v1.
 - [x] Afklaret: navnet er DarkIO.
