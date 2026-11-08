@@ -1,0 +1,57 @@
+package app.darkio
+
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.flow.first
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class HomeAndManifestTest {
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+    private val pm = context.packageManager
+
+    @Test
+    fun homeIntentResolvesToDarkIO() {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val found = pm.queryIntentActivities(home, PackageManager.MATCH_DEFAULT_ONLY)
+            .any { it.activityInfo.packageName == "app.darkio" && it.activityInfo.name == "app.darkio.MainActivity" }
+        assertTrue(found)
+    }
+
+    @Test
+    fun noInternetNorQueryAllPackages() {
+        val perms = pm.getPackageInfo("app.darkio", PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong()))
+            .requestedPermissions.orEmpty().toList()
+        assertFalse(perms.contains("android.permission.INTERNET"))
+        assertFalse(perms.contains("android.permission.QUERY_ALL_PACKAGES"))
+    }
+
+    // exported test/tooling activities that exist only in the debug build
+    private val debugOnly = setOf("androidx.compose.ui.tooling.PreviewActivity", "androidx.activity.ComponentActivity")
+
+    @Test
+    fun onlyMainActivityIsExported() {
+        val flags = PackageManager.GET_ACTIVITIES or PackageManager.GET_SERVICES or
+            PackageManager.GET_RECEIVERS or PackageManager.GET_PROVIDERS
+        val info = pm.getPackageInfo("app.darkio", PackageManager.PackageInfoFlags.of(flags.toLong()))
+        val exported = (info.activities.orEmpty().map { it.name to it.exported } +
+            info.services.orEmpty().map { it.name to it.exported } +
+            info.receivers.orEmpty().map { it.name to it.exported } +
+            info.providers.orEmpty().map { it.name to it.exported })
+            .filter { it.second }.map { it.first }
+            .filterNot { it in debugOnly }
+        assertTrue(exported.toString(), exported == listOf("app.darkio.MainActivity"))
+    }
+
+    @Test
+    fun installedAppsAreListedOnFirstLoad() = kotlinx.coroutines.runBlocking {
+        val repo = app.darkio.data.AppRepository(context, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO))
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { repo.start() }
+        val apps = kotlinx.coroutines.withTimeout(10_000) { repo.apps.first { it.isNotEmpty() } }
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { repo.stop() }
+        assertTrue(apps.any { it.id.startsWith("app.darkio/app.darkio.MainActivity#") })
+        assertTrue(apps.map { it.id }.distinct().size == apps.size)
+    }
+}
