@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Brugerens valg for én app. Rækker slettes aldrig, så en geninstalleret app husker sine valg.
- * [customCategory] og [favoriteSlot] er kun lagret her til senere funktioner.
+ * [customCategory] er kategoriens slug; [favoriteSlot] er kun lagret her til senere funktioner.
  */
 @Entity(tableName = "app_choice", primaryKeys = ["packageName", "activity", "userSerial"])
 data class AppChoice(
@@ -27,8 +27,8 @@ data class AppChoice(
 
 @Dao
 abstract class AppChoiceDao {
-    @Query("SELECT * FROM app_choice WHERE hidden = 1")
-    abstract fun hidden(): Flow<List<AppChoice>>
+    @Query("SELECT * FROM app_choice")
+    abstract fun all(): Flow<List<AppChoice>>
 
     @Query("SELECT * FROM app_choice WHERE packageName = :packageName AND activity = :activity AND userSerial = :userSerial")
     protected abstract suspend fun find(packageName: String, activity: String, userSerial: Long): AppChoice?
@@ -40,6 +40,12 @@ abstract class AppChoiceDao {
     open suspend fun setHidden(packageName: String, activity: String, userSerial: Long, hidden: Boolean) {
         val choice = find(packageName, activity, userSerial) ?: AppChoice(packageName, activity, userSerial)
         upsert(choice.copy(hidden = hidden))
+    }
+
+    @Transaction
+    open suspend fun setCategory(packageName: String, activity: String, userSerial: Long, category: String) {
+        val choice = find(packageName, activity, userSerial) ?: AppChoice(packageName, activity, userSerial)
+        upsert(choice.copy(customCategory = category))
     }
 }
 

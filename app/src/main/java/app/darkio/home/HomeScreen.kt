@@ -39,9 +39,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
+import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
 import app.darkio.drawer.AppDrawer
+import app.darkio.drawer.AppMenuSheet
 import app.darkio.drawer.SearchField
 import app.darkio.drawer.SearchResultsPane
 import app.darkio.drawer.searchApps
@@ -62,6 +64,9 @@ fun HomeScreen(
     onHintSeen: () -> Unit,
     onLaunch: (AppEntry) -> Unit,
     onSetHidden: (AppEntry, Boolean) -> Unit,
+    onSetCategory: (AppEntry, AppCategory) -> Unit,
+    onAppInfo: (AppEntry) -> Unit,
+    onUninstall: (AppEntry) -> Unit,
 ) {
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -71,10 +76,14 @@ fun HomeScreen(
         drawerOpen = true
     }
     var hiddenOpen by rememberSaveable { mutableStateOf(false) }
+    var menuAppId by rememberSaveable { mutableStateOf<String?>(null) }
+    val menuApp = menuAppId?.let { id -> apps.visible.firstOrNull { it.id == id } }
+    if (menuApp == null) menuAppId = null
     BackHandler(enabled = drawerOpen || query.isNotEmpty()) {
         if (drawerOpen) drawerOpen = false else query = ""
     }
     BackHandler(enabled = hiddenOpen) { hiddenOpen = false }
+    BackHandler(enabled = menuApp != null) { menuAppId = null }
     // Skuffen og hjem komponeres ikke bag skærmen, så tryk og TalkBack ikke når dem.
     if (hiddenOpen) {
         HiddenAppsScreen(apps.hidden, onShowAgain = { onSetHidden(it, false) })
@@ -117,7 +126,7 @@ fun HomeScreen(
                         BasicText(stringResource(R.string.home_all_apps), style = DarkIOType.Button.copy(color = DarkIOColors.Ink))
                     }
                 } else {
-                    SearchResultsPane(results, onLaunch, Modifier.weight(1f, fill = false))
+                    SearchResultsPane(results, onLaunch, { menuAppId = it.id }, Modifier.weight(1f, fill = false))
                 }
                 Spacer(Modifier.height(DarkIOSpace.S2))
                 SearchField(
@@ -137,10 +146,22 @@ fun HomeScreen(
             AppDrawer(
                 apps = apps.visible,
                 onLaunch = onLaunch,
-                onHide = { onSetHidden(it, true) },
+                onMenu = { menuAppId = it.id },
                 onShowHidden = { hiddenOpen = true },
                 onDismiss = { drawerOpen = false },
                 modifier = Modifier.imePadding().heightIn(max = maxHeight / 2),
+            )
+        }
+        if (menuApp != null) {
+            val close = { menuAppId = null }
+            AppMenuSheet(
+                app = menuApp,
+                onDismiss = close,
+                onHide = { onSetHidden(menuApp, true); close() },
+                onSetCategory = { onSetCategory(menuApp, it); close() },
+                onAppInfo = { onAppInfo(menuApp); close() },
+                onUninstall = { onUninstall(menuApp); close() },
+                modifier = Modifier.heightIn(max = maxHeight / 2),
             )
         }
     }

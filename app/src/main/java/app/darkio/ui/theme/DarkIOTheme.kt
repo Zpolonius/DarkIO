@@ -19,6 +19,7 @@ object DarkIOColors {
     val SurfaceGlass = Color(0xE616161C)
     val ScrimTop = Color(0xCC0D0D11)
     val ScrimBottom = Color(0xF20D0D11)
+    val ScrimSheet = Color(0xCC0D0D11)
     val Line = Color(0xFF26262F)
     val LineStrong = Color(0xFF33333E)
     val Ink = Color(0xFFEDEDF2)

@@ -30,6 +30,9 @@ class MainActivity : ComponentActivity() {
                 onHintSeen = { lifecycleScope.launch { darkIoPrefs.markHintSeen() } },
                 onLaunch = apps::launch,
                 onSetHidden = apps::setHidden,
+                onSetCategory = apps::setCategory,
+                onAppInfo = apps::openAppInfo,
+                onUninstall = apps::uninstall,
             )
         }
     }

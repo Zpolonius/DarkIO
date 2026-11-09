@@ -34,7 +34,7 @@ class DrawerUiTest {
     private val apps = (1..200).map { AppEntry("id$it", "App %03d".format(it)) }
 
     private fun show(hintSeen: Boolean = true) = rule.setContent {
-        HomeScreen(apps = AppLists(apps, emptyList()), hintSeen = hintSeen, onHintSeen = {}, onLaunch = {}, onSetHidden = { _, _ -> })
+        HomeScreen(apps = AppLists(apps, emptyList()), hintSeen = hintSeen, onHintSeen = {}, onLaunch = {}, onSetHidden = { _, _ -> }, onSetCategory = { _, _ -> }, onAppInfo = {}, onUninstall = {})
     }
 
     /** Alle trykbare elementer skal ligge under skærmens midte. */
@@ -107,7 +107,7 @@ class DrawerUiTest {
             AppEntry("t1", "MapNav", category = AppCategory.TOOL),
             AppEntry("o1", "MiscTool", category = AppCategory.OTHER),
         )
-        rule.setContent { HomeScreen(apps = AppLists(testApps, emptyList()), hintSeen = true, onHintSeen = {}, onLaunch = {}, onSetHidden = { _, _ -> }) }
+        rule.setContent { HomeScreen(apps = AppLists(testApps, emptyList()), hintSeen = true, onHintSeen = {}, onLaunch = {}, onSetHidden = { _, _ -> }, onSetCategory = { _, _ -> }, onAppInfo = {}, onUninstall = {}) }
         rule.onNodeWithText(allApps).performClick()
 
         val steps = listOf(

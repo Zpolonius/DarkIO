@@ -4,6 +4,7 @@ import android.os.Process
 import android.os.UserManager
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
+import app.darkio.data.AppCategory
 import app.darkio.data.AppDatabase
 import app.darkio.data.AppRepository
 import kotlinx.coroutines.CoroutineScope
@@ -33,26 +34,28 @@ class AppChoiceDbTest {
         db.close()
     }
 
+    private suspend fun hiddenRows() = dao.all().first().filter { it.hidden }
+
     @Test
     fun emptyTableHasNoHiddenApps() = runBlocking {
-        assertEquals(emptyList<Any>(), dao.hidden().first())
+        assertEquals(emptyList<Any>(), hiddenRows())
     }
 
     @Test
     fun hiddenChoiceIsKeptAndCanBeUndone() = runBlocking {
         dao.setHidden("p", "p.Main", 0, true)
-        assertEquals(listOf("p"), dao.hidden().first().map { it.packageName })
+        assertEquals(listOf("p"), hiddenRows().map { it.packageName })
         // Afinstallation rører aldrig databasen: rækken er der stadig, når appen kommer igen.
-        assertEquals("p.Main", dao.hidden().first().single().activity)
+        assertEquals("p.Main", hiddenRows().single().activity)
         dao.setHidden("p", "p.Main", 0, false)
-        assertEquals(emptyList<Any>(), dao.hidden().first())
+        assertEquals(emptyList<Any>(), hiddenRows())
     }
 
     @Test
     fun otherProfileOrActivityIsNotHidden() = runBlocking {
         dao.setHidden("p", "p.Main", 0, true)
         dao.setHidden("p", "p.Other", 10, false)
-        assertEquals(1, dao.hidden().first().size)
+        assertEquals(1, hiddenRows().size)
     }
 
     @Test
@@ -69,6 +72,45 @@ class AppChoiceDbTest {
             assertEquals("arbejde", it.getString(1))
             assertEquals(2, it.getInt(2))
         }
+    }
+
+    @Test
+    fun setCategoryKeepsExistingHiddenRowAndFavorite() = runBlocking {
+        db.openHelper.writableDatabase.execSQL(
+            "INSERT INTO app_choice (packageName, activity, userSerial, hidden, customCategory, favoriteSlot) VALUES ('p','p.Main',0,1,NULL,3)",
+        )
+        dao.setCategory("p", "p.Main", 0, "spil")
+        assertEquals(listOf("p"), hiddenRows().map { it.packageName })
+        dao.setCategory("p", "p.Main", 0, "andet")
+        db.openHelper.readableDatabase.query("SELECT hidden, customCategory, favoriteSlot FROM app_choice").use {
+            assertEquals(1, it.count)
+            it.moveToFirst()
+            assertEquals(1, it.getInt(0))
+            assertEquals("andet", it.getString(1))
+            assertEquals(3, it.getInt(2))
+        }
+    }
+
+    @Test
+    fun categoryChoiceSurvivesNewRepositoryAndInvalidSlugFallsBackToAuto() = runBlocking {
+        val serial = context.getSystemService(UserManager::class.java).getSerialNumberForUser(Process.myUserHandle())
+        val repo = AppRepository(context, scope, dao)
+        inst.runOnMainSync { repo.start() }
+        val app = withTimeout(10_000) { repo.lists.first { l -> l.visible.any { it.id.startsWith(self) } } }
+            .visible.first { it.id.startsWith(self) }
+        val auto = app.category
+        val other = AppCategory.entries.first { it != AppCategory.ALL && it != auto }
+        inst.runOnMainSync { repo.setCategory(app, other) }
+        withTimeout(10_000) { repo.lists.first { l -> l.visible.any { it.id == app.id && it.category == other } } }
+        inst.runOnMainSync { repo.stop() }
+        // Ny repository (som efter genstart) ser samme valg i Room.
+        val again = AppRepository(context, scope, dao)
+        inst.runOnMainSync { again.start() }
+        withTimeout(10_000) { again.lists.first { l -> l.visible.any { it.id == app.id && it.category == other } } }
+        // Ugyldig slug i en eksisterende række: ingen crash, automatisk kategori gælder.
+        dao.setCategory("app.darkio", "app.darkio.MainActivity", serial, "findes-ikke")
+        withTimeout(10_000) { again.lists.first { l -> l.visible.any { it.id == app.id && it.category == auto } } }
+        inst.runOnMainSync { again.stop() }
     }
 
     @Test

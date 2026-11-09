@@ -13,7 +13,7 @@ class TokensTest {
 
     private val kotlinColors = mapOf(
         "bg" to DarkIOColors.Bg, "surface" to DarkIOColors.Surface, "surface-glass" to DarkIOColors.SurfaceGlass,
-        "scrim-top" to DarkIOColors.ScrimTop, "scrim-bottom" to DarkIOColors.ScrimBottom,
+        "scrim-top" to DarkIOColors.ScrimTop, "scrim-bottom" to DarkIOColors.ScrimBottom, "scrim-sheet" to DarkIOColors.ScrimSheet,
         "line" to DarkIOColors.Line, "line-strong" to DarkIOColors.LineStrong,
         "ink" to DarkIOColors.Ink, "ink-soft" to DarkIOColors.InkSoft, "ink-muted" to DarkIOColors.InkMuted,
         "accent" to DarkIOColors.Accent, "pastel-coral" to DarkIOColors.Coral, "pastel-lilac" to DarkIOColors.Lilac,

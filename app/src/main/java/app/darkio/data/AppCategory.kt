@@ -25,3 +25,10 @@ fun appCategoryOf(category: Int): AppCategory = when (category) {
 
 fun appCategoryOf(info: ApplicationInfo?): AppCategory =
     if (info == null) AppCategory.OTHER else appCategoryOf(info.category)
+
+/** Brugerens valgte kategori ud fra den gemte slug; null for tom, ukendt eller "alle". */
+fun categoryFromSlug(slug: String?): AppCategory? = AppCategory.entries.firstOrNull { it != AppCategory.ALL && it.slug == slug }
+
+/** Effektiv kategori = brugerens valg ([custom]: app-id -> slug) ellers den automatiske. */
+fun withCustomCategories(apps: List<AppEntry>, custom: Map<String, String>): List<AppEntry> =
+    apps.map { app -> categoryFromSlug(custom[app.id])?.let { app.copy(category = it) } ?: app }

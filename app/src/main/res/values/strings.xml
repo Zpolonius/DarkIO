@@ -7,7 +7,11 @@
     <string name="hidden_apps_note">Skjul er en oprydning, ikke en lås. Appen kan stadig åbnes på andre måder, fx fra systemets indstillinger.</string>
     <string name="hidden_apps_empty">Ingen skjulte apps</string>
     <string name="hidden_apps_show_again">Vis igen</string>
-    <string name="drawer_hide_app">Skjul app</string>
+    <string name="drawer_app_menu">Åbn appmenu</string>
+    <string name="menu_hide">Skjul</string>
+    <string name="menu_move_category">Flyt kategori</string>
+    <string name="menu_app_info">Appinfo</string>
+    <string name="menu_uninstall">Afinstallér</string>
     <string name="search_placeholder">søg apps</string>
     <string name="search_no_results">// ingen apps fundet_</string>
     <string name="category_all">Alle</string>
