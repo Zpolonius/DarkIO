@@ -9,6 +9,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -23,6 +25,16 @@ data class AppChoice(
     val hidden: Boolean = false,
     val customCategory: String? = null,
     val favoriteSlot: Int? = null,
+)
+
+/** Genvej på én hjemskærmsside; [slot] (0-3) er pladsen i rækken. Rækken slettes når genvejen fjernes. */
+@Entity(tableName = "page_shortcut", primaryKeys = ["page", "packageName", "activity", "userSerial"])
+data class PageShortcut(
+    val page: Int,
+    val packageName: String,
+    val activity: String,
+    val userSerial: Long,
+    val slot: Int,
 )
 
 @Dao
@@ -51,6 +63,22 @@ abstract class AppChoiceDao {
         }
     }
 
+    @Query("SELECT * FROM page_shortcut")
+    abstract fun shortcuts(): Flow<List<PageShortcut>>
+
+    @Upsert
+    protected abstract suspend fun upsertShortcuts(shortcuts: List<PageShortcut>)
+
+    @Query("DELETE FROM page_shortcut WHERE page = :page AND packageName = :packageName AND activity = :activity AND userSerial = :userSerial")
+    protected abstract suspend fun deleteShortcut(page: Int, packageName: String, activity: String, userSerial: Long)
+
+    /** Skriver pladser og fjerner genveje på én side i én transaktion; andre sider og app_choice røres ikke. */
+    @Transaction
+    open suspend fun setShortcuts(set: List<PageShortcut>, remove: List<PageShortcut>) {
+        remove.forEach { deleteShortcut(it.page, it.packageName, it.activity, it.userSerial) }
+        upsertShortcuts(set)
+    }
+
     @Transaction
     open suspend fun setCategory(packageName: String, activity: String, userSerial: Long, category: String) {
         val choice = find(packageName, activity, userSerial) ?: AppChoice(packageName, activity, userSerial)
@@ -58,8 +86,14 @@ abstract class AppChoiceDao {
     }
 }
 
-/** Version 1. Ingen destruktiv migration: fremtidige skemaændringer skal have rigtige migrationer. */
-@Database(entities = [AppChoice::class], version = 1, exportSchema = true)
+/** Version 2 tilføjer page_shortcut. Eksisterende rækker i app_choice (favoritter, skjulte, kategorier) røres ikke; ingen destruktiv migration. */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `page_shortcut` (`page` INTEGER NOT NULL, `packageName` TEXT NOT NULL, `activity` TEXT NOT NULL, `userSerial` INTEGER NOT NULL, `slot` INTEGER NOT NULL, PRIMARY KEY(`page`, `packageName`, `activity`, `userSerial`))")
+    }
+}
+
+@Database(entities = [AppChoice::class, PageShortcut::class], version = 2, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun choices(): AppChoiceDao
 
@@ -68,7 +102,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         /** Én database pr. proces, så rotation ikke åbner en ny hver gang. */
         fun open(context: Context): AppDatabase = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "darkio.db").build().also { instance = it }
+            instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "darkio.db").addMigrations(MIGRATION_1_2).build().also { instance = it }
         }
     }
 }

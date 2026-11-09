@@ -4,4 +4,8 @@
     <issue id="OldTargetApi" severity="ignore" />
     <!-- "--" er terminal-idiom i mono-labels, ikke en tankestreg. -->
     <issue id="TypographyDashes" severity="ignore" />
+    <!-- serialization-core er fastlåst til 1.8.1: samme version som room-testings serialization-json (kun debug/androidTest). -->
+    <issue id="NewerVersionAvailable">
+        <ignore regexp="kotlinx-serialization-core than 1.8.1" />
+    </issue>
 </lint>

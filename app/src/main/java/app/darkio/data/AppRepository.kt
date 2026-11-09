@@ -35,11 +35,11 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
     private val launcherApps = context.getSystemService(LauncherApps::class.java)
     private val userManager = context.getSystemService(UserManager::class.java)
     private val installed = MutableStateFlow<List<AppEntry>>(emptyList())
-    val lists: StateFlow<AppLists> = combine(installed, choices.all()) { apps, rows ->
+    val lists: StateFlow<AppLists> = combine(installed, choices.all(), choices.shortcuts()) { apps, rows, shortcuts ->
         fun AppChoice.id() = appId(packageName, activity, userSerial)
         val custom = rows.filter { it.customCategory != null }.associate { it.id() to it.customCategory!! }
         val slots = rows.filter { it.favoriteSlot != null }.associate { it.id() to it.favoriteSlot!! }
-        splitApps(withCustomCategories(apps, custom), rows.filter { it.hidden }.map { it.id() }.toSet()).copy(favoriteSlots = slots)
+        splitApps(withCustomCategories(apps, custom), rows.filter { it.hidden }.map { it.id() }.toSet()).copy(favoriteSlots = slots, shortcutSlots = (0 until PAGE_COUNT).associateWith { shortcutSlotsOnPage(shortcuts, it) })
     }
         .stateIn(scope, SharingStarted.Eagerly, AppLists(emptyList(), emptyList()))
     private var job: Job? = null
@@ -80,6 +80,18 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
                 val name = info.componentName
                 AppChoice(name.packageName, name.className, userManager.getSerialNumberForUser(info.user), favoriteSlot = slot)
             })
+        }
+    }
+
+    /** Skriver genvejspladser på [page] (null fjerner genvejen) i én transaktion. */
+    fun setShortcutSlots(page: Int, changes: List<Pair<AppEntry, Int?>>) {
+        scope.launch(Dispatchers.IO) {
+            val rows = changes.mapNotNull { (app, slot) ->
+                val info = app.info ?: return@mapNotNull null
+                val name = info.componentName
+                PageShortcut(page, name.packageName, name.className, userManager.getSerialNumberForUser(info.user), slot ?: -1)
+            }
+            choices.setShortcuts(rows.filter { it.slot >= 0 }, rows.filter { it.slot < 0 })
         }
     }
 
