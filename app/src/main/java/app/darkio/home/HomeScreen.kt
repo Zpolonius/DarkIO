@@ -24,12 +24,15 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +51,7 @@ import app.darkio.data.dockSlots
 import app.darkio.data.firstFreeSlot
 import app.darkio.data.reorderedSlots
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import app.darkio.drawer.AppDrawer
 import app.darkio.drawer.AppMenuSheet
 import app.darkio.drawer.SearchField
@@ -74,7 +78,13 @@ fun HomeScreen(
     onSetCategory: (AppEntry, AppCategory) -> Unit,
     onAppInfo: (AppEntry) -> Unit,
     onUninstall: (AppEntry) -> Unit,
+    homeSignal: Int = 0,
 ) {
+    val pageLabels = listOf(R.string.page_today, R.string.page_training, R.string.page_build).map { stringResource(it) }
+    val pager = rememberPagerState { pageLabels.size }
+    val scope = rememberCoroutineScope()
+    // Hjem-knappen (ny MAIN/HOME-intent) vender altid tilbage til side 1.
+    LaunchedEffect(homeSignal) { if (homeSignal > 0) pager.scrollToPage(0) }
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     val results = remember(query, apps.visible) { searchApps(apps.visible, query) }
@@ -111,6 +121,12 @@ fun HomeScreen(
                 .windowInsetsPadding(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom))
                 .onVerticalSwipe { if (it < -swipePx) openDrawer() else if (it > swipePx) drawerOpen = false },
         ) {
+            // Kun indholdet over dokken skifter side; dokken og søgefeltet står fast nedenfor.
+            HorizontalPager(pager, Modifier.fillMaxSize().testTag("homePager")) { page ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    BasicText(pageLabels[page], style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("page$page"))
+                }
+            }
             Column(
                 Modifier
                     .align(Alignment.BottomCenter)
@@ -120,6 +136,8 @@ fun HomeScreen(
                     .padding(horizontal = DarkIOSpace.S5, vertical = DarkIOSpace.S5),
             ) {
                 if (query.isBlank()) {
+                    PageDots(pageLabels, pager.currentPage, { scope.launch { pager.animateScrollToPage(it) } }, Modifier.align(Alignment.CenterHorizontally))
+                    Spacer(Modifier.height(DarkIOSpace.S2))
                     if (dockFull) {
                         BasicText(stringResource(R.string.dock_full), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("dockFull"))
                         Spacer(Modifier.height(DarkIOSpace.S3))
