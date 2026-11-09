@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -42,6 +44,10 @@ import app.darkio.R
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
+import app.darkio.data.dockSlots
+import app.darkio.data.firstFreeSlot
+import app.darkio.data.reorderedSlots
+import kotlinx.coroutines.delay
 import app.darkio.drawer.AppDrawer
 import app.darkio.drawer.AppMenuSheet
 import app.darkio.drawer.SearchField
@@ -64,6 +70,7 @@ fun HomeScreen(
     onHintSeen: () -> Unit,
     onLaunch: (AppEntry) -> Unit,
     onSetHidden: (AppEntry, Boolean) -> Unit,
+    onSetFavorites: (List<Pair<AppEntry, Int?>>) -> Unit,
     onSetCategory: (AppEntry, AppCategory) -> Unit,
     onAppInfo: (AppEntry) -> Unit,
     onUninstall: (AppEntry) -> Unit,
@@ -77,6 +84,9 @@ fun HomeScreen(
     }
     var hiddenOpen by rememberSaveable { mutableStateOf(false) }
     var menuAppId by rememberSaveable { mutableStateOf<String?>(null) }
+    val dock = remember(apps.visible, apps.favoriteSlots) { dockSlots(apps.visible, apps.favoriteSlots) }
+    var dockFull by remember { mutableStateOf(false) }
+    LaunchedEffect(dockFull) { if (dockFull) { delay(3000); dockFull = false } }
     val menuApp = menuAppId?.let { id -> apps.visible.firstOrNull { it.id == id } }
     if (menuApp == null) menuAppId = null
     BackHandler(enabled = drawerOpen || query.isNotEmpty()) {
@@ -110,6 +120,17 @@ fun HomeScreen(
                     .padding(horizontal = DarkIOSpace.S5, vertical = DarkIOSpace.S5),
             ) {
                 if (query.isBlank()) {
+                    if (dockFull) {
+                        BasicText(stringResource(R.string.dock_full), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("dockFull"))
+                        Spacer(Modifier.height(DarkIOSpace.S3))
+                    }
+                    Dock(
+                        dock,
+                        onLaunch,
+                        onMenu = { menuAppId = it.id },
+                        onMove = { from, to -> onSetFavorites(reorderedSlots(dock, from, to, apps.hidden.mapNotNull { apps.favoriteSlots[it.id] }.toSet()).map { (id, slot) -> dock.filterNotNull().first { it.id == id } to slot }) },
+                    )
+                    Spacer(Modifier.height(DarkIOSpace.S3))
                     if (!hintSeen) {
                         BasicText(stringResource(R.string.hint_swipe_up), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft))
                         Spacer(Modifier.height(DarkIOSpace.S3))
@@ -157,6 +178,14 @@ fun HomeScreen(
             AppMenuSheet(
                 app = menuApp,
                 onDismiss = close,
+                isFavorite = dock.any { it?.id == menuApp.id },
+                onToggleFavorite = {
+                    val slot = firstFreeSlot((apps.visible + apps.hidden).mapNotNull { apps.favoriteSlots[it.id] })
+                    if (dock.any { it?.id == menuApp.id }) onSetFavorites(listOf(menuApp to null))
+                    else if (slot != null) onSetFavorites(listOf(menuApp to slot))
+                    else dockFull = true
+                    close()
+                },
                 onHide = { onSetHidden(menuApp, true); close() },
                 onSetCategory = { onSetCategory(menuApp, it); close() },
                 onAppInfo = { onAppInfo(menuApp); close() },

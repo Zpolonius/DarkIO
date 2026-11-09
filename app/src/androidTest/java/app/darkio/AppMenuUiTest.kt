@@ -69,6 +69,7 @@ class AppMenuUiTest {
             onHintSeen = {},
             onLaunch = { events += "launch ${it.id}" },
             onSetHidden = { app, h -> hidden = if (h) hidden + app.id else hidden - app.id },
+            onSetFavorites = {},
             onSetCategory = { app, c -> events += "category ${app.id} ${c.slug}"; custom = custom + (app.id to c.slug) },
             onAppInfo = { events += "info ${it.id}" },
             onUninstall = { events += "uninstall ${it.id}" },

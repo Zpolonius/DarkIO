@@ -5,6 +5,7 @@ import android.os.UserManager
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.data.AppCategory
+import app.darkio.data.AppChoice
 import app.darkio.data.AppDatabase
 import app.darkio.data.AppRepository
 import kotlinx.coroutines.CoroutineScope
@@ -138,5 +139,38 @@ class AppChoiceDbTest {
         inst.runOnMainSync { repo.stop() }
         assertEquals(false, first.visible.any { it.id.startsWith(self) })
         assertEquals(true, first.hidden.any { it.id.startsWith(self) })
+    }
+
+    private suspend fun row(pkg: String) = dao.all().first().single { it.packageName == pkg }
+
+    @Test
+    fun favouriteOnNewRowIsStoredAndRemovingKeepsRow() = runBlocking {
+        dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = 2)))
+        assertEquals(2, row("p").favoriteSlot)
+        dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = null)))
+        assertEquals(null, row("p").favoriteSlot)
+    }
+
+    @Test
+    fun favouriteOnExistingRowKeepsHiddenAndCategory() = runBlocking {
+        db.openHelper.writableDatabase.execSQL(
+            "INSERT INTO app_choice (packageName, activity, userSerial, hidden, customCategory, favoriteSlot) VALUES ('p','p.Main',0,1,'arbejde',NULL)",
+        )
+        dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = 1)))
+        assertEquals(AppChoice("p", "p.Main", 0, true, "arbejde", 1), row("p"))
+        dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = null)))
+        assertEquals(AppChoice("p", "p.Main", 0, true, "arbejde", null), row("p"))
+        // Skjul og vis igen rører ikke pladsen.
+        dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = 3)))
+        dao.setHidden("p", "p.Main", 0, false)
+        assertEquals(3, row("p").favoriteSlot)
+    }
+
+    @Test
+    fun reorderWritesAllChangesTogether() = runBlocking {
+        dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = 0), AppChoice("q", "q.Main", 0, favoriteSlot = 1)))
+        dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = 1), AppChoice("q", "q.Main", 0, favoriteSlot = 0)))
+        assertEquals(1, row("p").favoriteSlot)
+        assertEquals(0, row("q").favoriteSlot)
     }
 }

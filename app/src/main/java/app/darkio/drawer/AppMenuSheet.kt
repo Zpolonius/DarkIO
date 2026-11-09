@@ -46,6 +46,8 @@ import app.darkio.ui.theme.DarkIOType
 fun AppMenuSheet(
     app: AppEntry,
     onDismiss: () -> Unit,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onHide: () -> Unit,
     onSetCategory: (AppCategory) -> Unit,
     onAppInfo: () -> Unit,
@@ -83,6 +85,7 @@ fun AppMenuSheet(
                     MenuRow(stringResource(category.labelRes), DarkIOColors.Ink, Modifier.testTag("menuCategory_${category.slug}")) { onSetCategory(category) }
                 }
             } else {
+                MenuRow(stringResource(if (isFavorite) R.string.menu_unfavorite else R.string.menu_favorite), DarkIOColors.Ink, Modifier.testTag("menuFavorite"), onToggleFavorite)
                 MenuRow(stringResource(R.string.menu_hide), DarkIOColors.Ink, Modifier.testTag("menuHide"), onHide)
                 MenuRow(stringResource(R.string.menu_move_category), DarkIOColors.Ink, Modifier.testTag("menuMoveCategory")) { pickingCategory = true }
                 MenuRow(stringResource(R.string.menu_app_info), DarkIOColors.Ink, Modifier.testTag("menuAppInfo"), onAppInfo)
