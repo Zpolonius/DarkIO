@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DarkIO</string>
+    <string name="page_today">i dag</string>
+    <string name="page_training">træning</string>
+    <string name="page_build">byg</string>
     <string name="home_all_apps">alle apps</string>
     <string name="hint_swipe_up">// swipe op for alle apps</string>
     <string name="hidden_apps_title">Skjulte apps</string>

@@ -70,6 +70,9 @@ object DarkIOSize {
     val GlyphSize = 24.dp
     val TouchTarget = 48.dp
     val LineStroke = 1.dp
+    val PageDot = 6.dp
+    val PageDotActiveWidth = 20.dp
+    val PageDotHitHeight = 24.dp
 }
 
 private val Display = FontFamily(
