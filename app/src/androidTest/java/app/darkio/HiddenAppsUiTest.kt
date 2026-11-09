@@ -38,6 +38,9 @@ class HiddenAppsUiTest {
             onHintSeen = {},
             onLaunch = {},
             onSetHidden = { app, hidden -> hiddenIds = if (hidden) hiddenIds + app.id else hiddenIds - app.id },
+            onSetCategory = { _, _ -> },
+            onAppInfo = {},
+            onUninstall = {},
         )
     }
 
@@ -55,10 +58,11 @@ class HiddenAppsUiTest {
     }
 
     @Test
-    fun longPressHidesApp() {
+    fun hideInLongPressMenuHidesApp() {
         show()
         rule.onNodeWithText(allApps).performClick()
         rule.onNodeWithText("Bravo").performTouchInput { longClick() }
+        rule.onNodeWithText(context.getString(R.string.menu_hide)).performClick()
         rule.onNodeWithText("Bravo").assertDoesNotExist()
         rule.onNodeWithText("Alfa").assertIsDisplayed()
     }

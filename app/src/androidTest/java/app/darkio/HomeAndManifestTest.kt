@@ -26,6 +26,7 @@ class HomeAndManifestTest {
             .requestedPermissions.orEmpty().toList()
         assertFalse(perms.contains("android.permission.INTERNET"))
         assertFalse(perms.contains("android.permission.QUERY_ALL_PACKAGES"))
+        assertTrue(perms.contains("android.permission.REQUEST_DELETE_PACKAGES"))
     }
 
     // exported test/tooling activities that exist only in the debug build

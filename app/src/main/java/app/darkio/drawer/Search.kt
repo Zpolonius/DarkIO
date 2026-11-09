@@ -2,7 +2,7 @@ package app.darkio.drawer
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -108,7 +108,7 @@ fun SearchField(
 }
 
 @Composable
-fun SearchResultsPane(results: List<AppEntry>, onLaunch: (AppEntry) -> Unit, modifier: Modifier = Modifier) {
+fun SearchResultsPane(results: List<AppEntry>, onLaunch: (AppEntry) -> Unit, onMenu: (AppEntry) -> Unit, modifier: Modifier = Modifier) {
     if (results.isEmpty()) {
         val text = stringResource(R.string.search_no_results)
         val styled = buildAnnotatedString {
@@ -122,7 +122,7 @@ fun SearchResultsPane(results: List<AppEntry>, onLaunch: (AppEntry) -> Unit, mod
         LazyColumn(modifier.fillMaxWidth(), reverseLayout = true) {
             items(results, key = { it.id }) { app ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchMin).clickable(role = Role.Button) { onLaunch(app) }
+                    modifier = Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchMin).combinedClickable(role = Role.Button, onLongClickLabel = stringResource(R.string.drawer_app_menu), onLongClick = { onMenu(app) }) { onLaunch(app) }
                         .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S1),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

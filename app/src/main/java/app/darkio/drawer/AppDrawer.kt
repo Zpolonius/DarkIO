@@ -57,12 +57,12 @@ import app.darkio.ui.theme.DarkIOType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** App-skuffe: 4-kolonners gitter, søgning og kategori-bar, bundforankret. [onDismiss] kaldes ved swipe ned, [onHide] ved langt tryk på en app. */
+/** App-skuffe: 4-kolonners gitter, søgning og kategori-bar, bundforankret. [onDismiss] kaldes ved swipe ned, [onMenu] ved langt tryk på en app. */
 @Composable
 fun AppDrawer(
     apps: List<AppEntry>,
     onLaunch: (AppEntry) -> Unit,
-    onHide: (AppEntry) -> Unit,
+    onMenu: (AppEntry) -> Unit,
     onShowHidden: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -111,11 +111,11 @@ fun AppDrawer(
                 verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S3),
             ) {
                 items(filteredApps, key = { it.id }) { app ->
-                    AppTile(app, onClick = { onLaunch(app) }, onLongClick = { onHide(app) })
+                    AppTile(app, onClick = { onLaunch(app) }, onLongClick = { onMenu(app) })
                 }
             }
         } else {
-            SearchResultsPane(results, onLaunch, Modifier.weight(1f, fill = false))
+            SearchResultsPane(results, onLaunch, onMenu, Modifier.weight(1f, fill = false))
         }
         SearchField(
             query = query,
@@ -151,7 +151,7 @@ private fun AppTile(app: AppEntry, onClick: () -> Unit, onLongClick: () -> Unit)
     Column(
         Modifier
             .fillMaxWidth()
-            .combinedClickable(role = Role.Button, onLongClickLabel = stringResource(R.string.drawer_hide_app), onLongClick = onLongClick, onClick = onClick)
+            .combinedClickable(role = Role.Button, onLongClickLabel = stringResource(R.string.drawer_app_menu), onLongClick = onLongClick, onClick = onClick)
             .padding(vertical = DarkIOSpace.S1),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
