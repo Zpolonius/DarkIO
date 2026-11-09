@@ -31,7 +31,7 @@ class SearchUiTest {
     private var launched: AppEntry? = null
 
     private fun show() = rule.setContent {
-        HomeScreen(apps = AppLists(apps, emptyList()), hintSeen = true, onHintSeen = {}, onLaunch = { launched = it }, onSetHidden = { _, _ -> }, onSetCategory = { _, _ -> }, onAppInfo = {}, onUninstall = {})
+        HomeScreen(apps = AppLists(apps, emptyList()), hintSeen = true, onHintSeen = {}, onLaunch = { launched = it }, onSetHidden = { _, _ -> }, onSetFavorites = {}, onSetCategory = { _, _ -> }, onAppInfo = {}, onUninstall = {})
     }
 
     private fun assertClickablesBelowMiddle() {

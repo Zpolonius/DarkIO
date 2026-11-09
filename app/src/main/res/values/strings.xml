@@ -8,6 +8,12 @@
     <string name="hidden_apps_empty">Ingen skjulte apps</string>
     <string name="hidden_apps_show_again">Vis igen</string>
     <string name="drawer_app_menu">Åbn appmenu</string>
+    <string name="menu_favorite">Favorit</string>
+    <string name="menu_unfavorite">Fjern favorit</string>
+    <string name="dock_full">Docken er fuld. Fjern en favorit eller vis en skjult app igen.</string>
+    <string name="dock_move_left">Flyt til venstre</string>
+    <string name="dock_move_right">Flyt til højre</string>
+    <string name="dock_empty_slot">Tom plads i dock</string>
     <string name="menu_hide">Skjul</string>
     <string name="menu_move_category">Flyt kategori</string>
     <string name="menu_app_info">Appinfo</string>

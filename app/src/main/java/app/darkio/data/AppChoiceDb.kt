@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Brugerens valg for én app. Rækker slettes aldrig, så en geninstalleret app husker sine valg.
- * [customCategory] er kategoriens slug; [favoriteSlot] er kun lagret her til senere funktioner.
+ * [customCategory] er kategoriens slug; [favoriteSlot] er pladsen (0-3) i docken, null hvis appen ikke er favorit.
  */
 @Entity(tableName = "app_choice", primaryKeys = ["packageName", "activity", "userSerial"])
 data class AppChoice(
@@ -40,6 +40,15 @@ abstract class AppChoiceDao {
     open suspend fun setHidden(packageName: String, activity: String, userSerial: Long, hidden: Boolean) {
         val choice = find(packageName, activity, userSerial) ?: AppChoice(packageName, activity, userSerial)
         upsert(choice.copy(hidden = hidden))
+    }
+
+    /** Sætter [AppChoice.favoriteSlot] for hver ændring (null fjerner favoritten) i én transaktion; skjult og kategori bevares. */
+    @Transaction
+    open suspend fun setFavoriteSlots(changes: List<AppChoice>) {
+        changes.forEach {
+            val choice = find(it.packageName, it.activity, it.userSerial) ?: AppChoice(it.packageName, it.activity, it.userSerial)
+            upsert(choice.copy(favoriteSlot = it.favoriteSlot))
+        }
     }
 
     @Transaction

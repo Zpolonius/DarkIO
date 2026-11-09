@@ -38,6 +38,7 @@ class HiddenAppsUiTest {
             onHintSeen = {},
             onLaunch = {},
             onSetHidden = { app, hidden -> hiddenIds = if (hidden) hiddenIds + app.id else hiddenIds - app.id },
+            onSetFavorites = {},
             onSetCategory = { _, _ -> },
             onAppInfo = {},
             onUninstall = {},

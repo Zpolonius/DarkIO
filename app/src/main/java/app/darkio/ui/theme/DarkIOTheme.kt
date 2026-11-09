@@ -39,6 +39,7 @@ object DarkIOShapes {
     val Sm = RoundedCornerShape(8.dp)
     val Md = RoundedCornerShape(14.dp)
     val Lg = RoundedCornerShape(18.dp)
+    val Dock = RoundedCornerShape(24.dp)
     val Sheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     val Pill = RoundedCornerShape(percent = 50)
 }

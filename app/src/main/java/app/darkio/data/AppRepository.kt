@@ -38,7 +38,8 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
     val lists: StateFlow<AppLists> = combine(installed, choices.all()) { apps, rows ->
         fun AppChoice.id() = appId(packageName, activity, userSerial)
         val custom = rows.filter { it.customCategory != null }.associate { it.id() to it.customCategory!! }
-        splitApps(withCustomCategories(apps, custom), rows.filter { it.hidden }.map { it.id() }.toSet())
+        val slots = rows.filter { it.favoriteSlot != null }.associate { it.id() to it.favoriteSlot!! }
+        splitApps(withCustomCategories(apps, custom), rows.filter { it.hidden }.map { it.id() }.toSet()).copy(favoriteSlots = slots)
     }
         .stateIn(scope, SharingStarted.Eagerly, AppLists(emptyList(), emptyList()))
     private var job: Job? = null
@@ -68,6 +69,17 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
         scope.launch(Dispatchers.IO) {
             val serial = userManager.getSerialNumberForUser(info.user)
             choices.setHidden(info.componentName.packageName, info.componentName.className, serial, hidden)
+        }
+    }
+
+    /** Skriver dockpladser (null fjerner favoritten) for flere apps i én transaktion. */
+    fun setFavoriteSlots(changes: List<Pair<AppEntry, Int?>>) {
+        scope.launch(Dispatchers.IO) {
+            choices.setFavoriteSlots(changes.mapNotNull { (app, slot) ->
+                val info = app.info ?: return@mapNotNull null
+                val name = info.componentName
+                AppChoice(name.packageName, name.className, userManager.getSerialNumberForUser(info.user), favoriteSlot = slot)
+            })
         }
     }
 
