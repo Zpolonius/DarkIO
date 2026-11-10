@@ -13,6 +13,12 @@
     <string name="drawer_app_menu">Åbn appmenu</string>
     <string name="menu_favorite">Favorit</string>
     <string name="menu_unfavorite">Fjern favorit</string>
+    <string name="menu_shortcut">Genvej på siden</string>
+    <string name="menu_unshortcut">Fjern genvej fra siden</string>
+    <string name="shortcuts_full">Rækken har fire genveje. Fjern en genvej eller vis en skjult app igen.</string>
+    <string name="dock_label">Dock</string>
+    <string name="shortcuts_label">Genvejsrække</string>
+    <string name="shortcut_empty_slot">Tom genvejsplads</string>
     <string name="dock_full">Docken er fuld. Fjern en favorit eller vis en skjult app igen.</string>
     <string name="dock_move_left">Flyt til venstre</string>
     <string name="dock_move_right">Flyt til højre</string>

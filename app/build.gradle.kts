@@ -69,5 +69,8 @@ dependencies {
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.room.testing)
+    // room-testing (androidTest) leser skemaet med serialization-json 1.8.1; androidTest-APK genbruger appens klasser, så core 1.8.1 skal ligge i debug-appen (ellers AbstractMethodError i MigrationTest).
+    debugImplementation(libs.serialization.core)
     debugImplementation(libs.compose.ui.test.manifest)
 }
