@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.flow.first
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,7 +27,8 @@ class HomeAndManifestTest {
             .requestedPermissions.orEmpty().toList()
         assertFalse(perms.contains("android.permission.INTERNET"))
         assertFalse(perms.contains("android.permission.QUERY_ALL_PACKAGES"))
-        assertTrue(perms.contains("android.permission.REQUEST_DELETE_PACKAGES"))
+        // N4: kun de tilladte tilladelser indtil nu
+        assertEquals(setOf("android.permission.REQUEST_DELETE_PACKAGES", "android.permission.EXPAND_STATUS_BAR"), perms.filter { !it.startsWith("app.darkio.") }.toSet())
     }
 
     // exported test/tooling activities that exist only in the debug build

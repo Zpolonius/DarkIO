@@ -13,9 +13,11 @@ import androidx.lifecycle.lifecycleScope
 import app.darkio.data.AppDatabase
 import app.darkio.data.AppRepository
 import app.darkio.data.darkIoPrefs
+import app.darkio.data.expandNotificationPanel
 import app.darkio.data.hintSeen
 import app.darkio.data.markHintSeen
 import app.darkio.home.HomeScreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
                 onAppInfo = apps::openAppInfo,
                 onUninstall = apps::uninstall,
                 homeSignal = homeSignal,
+                onOpenNotifications = { lifecycleScope.launch(Dispatchers.Default) { expandNotificationPanel(this@MainActivity) } },
             )
         }
     }
