@@ -82,6 +82,7 @@ fun HomeScreen(
     onUninstall: (AppEntry) -> Unit,
     homeSignal: Int = 0,
     onSetShortcuts: (page: Int, changes: List<Pair<AppEntry, Int?>>) -> Unit = { _, _ -> },
+    onOpenNotifications: () -> Unit = {},
 ) {
     val pageLabels = listOf(R.string.page_today, R.string.page_training, R.string.page_build).map { stringResource(it) }
     val pager = rememberPagerState { pageLabels.size }
@@ -131,7 +132,12 @@ fun HomeScreen(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom))
-                .onVerticalSwipe { if (it < -swipePx) openDrawer() else if (it > swipePx) drawerOpen = false },
+                .onVerticalSwipe {
+                    if (it < -swipePx) openDrawer()
+                    else if (it > swipePx) {
+                        if (drawerOpen) drawerOpen = false else if (query.isEmpty()) onOpenNotifications()
+                    }
+                },
         ) {
             // Siden og dens genvejsrække skifter side sammen; dokken og søgefeltet står fast nedenfor.
             HorizontalPager(pager, Modifier.fillMaxSize().testTag("homePager")) { p ->
