@@ -3,4 +3,7 @@
     <string name="app_name">DarkIO</string>
     <string name="home_all_apps">alle apps</string>
     <string name="hint_swipe_up">// swipe op for alle apps</string>
+    <string name="card_error">err: kunne ikke hente</string>
+    <string name="card_retry">prøv igen</string>
+    <string name="card_grant_access">giv adgang</string>
 </resources>

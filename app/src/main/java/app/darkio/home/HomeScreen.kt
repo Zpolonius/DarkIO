@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
+import app.darkio.dashboard.ClockCard
 import app.darkio.data.AppEntry
 import app.darkio.drawer.AppDrawer
 import app.darkio.ui.onVerticalSwipe
@@ -68,6 +69,7 @@ fun HomeScreen(apps: List<AppEntry>, hintSeen: Boolean, onHintSeen: () -> Unit, 
                 .windowInsetsPadding(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom))
                 .onVerticalSwipe { if (it < -swipePx) openDrawer() else if (it > swipePx) drawerOpen = false },
         ) {
+            ClockCard(Modifier.align(Alignment.TopCenter).padding(horizontal = DarkIOSpace.S5).padding(top = DarkIOSpace.TopInset))
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = DarkIOSpace.S5, vertical = DarkIOSpace.S5)) {
                 if (!hintSeen) {
                     BasicText(stringResource(R.string.hint_swipe_up), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft))
