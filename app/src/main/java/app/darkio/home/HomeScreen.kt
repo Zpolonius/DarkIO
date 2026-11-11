@@ -49,6 +49,7 @@ import app.darkio.R
 import app.darkio.dashboard.CalendarCard
 import app.darkio.dashboard.ClockCard
 import app.darkio.dashboard.TipCard
+import app.darkio.dashboard.WorkoutCard
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
@@ -160,6 +161,16 @@ fun HomeScreen(
                             CalendarCard()
                             Spacer(Modifier.height(DarkIOSpace.S3))
                             TipCard()
+                        }
+                    } else if (p == 1) {
+                        Column(
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth()
+                                .padding(horizontal = DarkIOSpace.S5)
+                                .padding(top = DarkIOSpace.TopInset),
+                        ) {
+                            WorkoutCard()
                         }
                     }
                     BasicText(pageLabels[p], style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("page$p"))

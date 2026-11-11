@@ -93,16 +93,27 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-@Database(entities = [AppChoice::class, PageShortcut::class], version = 2, exportSchema = true)
+@Database(entities = [AppChoice::class, PageShortcut::class, WorkoutDay::class], version = 3, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun choices(): AppChoiceDao
+    abstract fun workouts(): WorkoutDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
 
         /** Én database pr. proces, så rotation ikke åbner en ny hver gang. */
         fun open(context: Context): AppDatabase = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "darkio.db").addMigrations(MIGRATION_1_2).build().also { instance = it }
+            instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "darkio.db")
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addCallback(object : RoomDatabase.Callback() {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        super.onCreate(db)
+                        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (2, 'tirsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+                        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (4, 'torsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+                        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (7, 'søndag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+                    }
+                })
+                .build().also { instance = it }
         }
     }
 }
