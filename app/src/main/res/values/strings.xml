@@ -46,4 +46,68 @@
     <string name="calendar_all_day">hele dagen</string>
     <string name="calendar_tomorrow">i morgen %1$s</string>
     <string name="calendar_untitled">(uden titel)</string>
+    <string name="tip_copied">kopieret til udklipsholder</string>
+
+    <string-array name="vibe_tips">
+        <item>Skriv testen først — koden følger</item>
+        <item>Commit i små bidder med klare beskeder</item>
+        <item>Læs diffen grundigt før du merger</item>
+        <item>En ren main er et roligt sind</item>
+        <item>Mindre kode er færre fejl</item>
+        <item>Hold funktioner korte og fokuserede</item>
+        <item>Slet ubrugt kode uden tøven</item>
+        <item>En god fejltekst fortæller hvad du kan gøre</item>
+        <item>Refaktorér når testen er grøn</item>
+        <item>Undgå globale tilstande og skjulte sideeffekter</item>
+        <item>Gør det enkle til det første</item>
+        <item>Test på rigtige enheder tidligt og ofte</item>
+        <item>Dokumentér hvorfor, ikke bare hvordan</item>
+        <item>Hold afhængigheder på et absolutt minimum</item>
+        <item>Forstå problemet før du skriver den første linje</item>
+        <item>Brug meningsfulde navne der forklarer hensigten</item>
+        <item>Håndter fejl eksplisit og elegant</item>
+        <item>Lad compileren fange dine fejl</item>
+        <item>En god kodebase føles som prose</item>
+        <item>Hold uforanderlighed som standard</item>
+        <item>Del store klasser op i små specialister</item>
+        <item>Respekter eksisterende konventioner i koden</item>
+        <item>Sørg for at alle advarsler rettes med det samme</item>
+        <item>Skriv kode som kan læses af mennesker</item>
+        <item>Lad ikke TODOs ligge for evigt</item>
+        <item>Hold UI-laget fri for forretningslogik</item>
+        <item>Gør komponenter genbrugelige og enkle</item>
+        <item>Test dine grænsetilfælde grundigt</item>
+        <item>Brug stærke typer i stedet for primitive værdier</item>
+        <item>Hold datamodeller enkle og konsistente</item>
+        <item>Hold øje med ydeevnen på hovedtråden</item>
+        <item>Foretræk sammensætning frem for arv</item>
+        <item>Sørg for at null-sikkerhed udnyttes fuldt ud</item>
+        <item>Hold dine branches korte og fokuserede</item>
+        <item>Lav regelmæssige pauser for et skarpt blik</item>
+        <item>Hold kildekoden ren og fri for unødvendige kommentarer</item>
+        <item>Verificér dine antagelser med en hurtig test</item>
+        <item>Brug immaterielle datastrukturer hvor muligt</item>
+        <item>Sørg for at logning er nyttig og støjfri</item>
+        <item>Byg moduler der er uafhængige af hinanden</item>
+        <item>Hold databasemigrationer sikre og testede</item>
+        <item>Respekter brugerens batteri og privatliv</item>
+        <item>Gør UI reaktiv og flydende</item>
+        <item>Test altid offline-tilstanden</item>
+        <item>Sørg for at tilgængelighed er tænkt ind fra start</item>
+        <item>Brug lokale variabler til at holde state ren</item>
+        <item>Hold undtagelser specifikke og meningsfulde</item>
+        <item>Undgå for tidlig optimering</item>
+        <item>Hold build-tider hurtige og rene</item>
+        <item>Sørg for at git-historikken er ren og læsbar</item>
+        <item>Følg designsystemets tokens konsekvent</item>
+        <item>Hold animationer korte og diskrete</item>
+        <item>Sørg for at touch-flader er mindst 48dp</item>
+        <item>Skriv en klar beskrivelse i hver commit</item>
+        <item>Gør det nemt at finde rundt i projektet</item>
+        <item>Test på skærme i forskellige størrelser</item>
+        <item>Hold fokus på én ting ad gangen</item>
+        <item>Sørg for at koden er nem at slette igen</item>
+        <item>Fejlfinding er en kunstart — tag den med ro</item>
+        <item>Nyd processen og glæd dig over fungerende kode</item>
+    </string-array>
 </resources>

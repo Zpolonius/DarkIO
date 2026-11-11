@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
 import app.darkio.dashboard.CalendarCard
 import app.darkio.dashboard.ClockCard
+import app.darkio.dashboard.TipCard
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
@@ -157,6 +158,8 @@ fun HomeScreen(
                             ClockCard()
                             Spacer(Modifier.height(DarkIOSpace.S3))
                             CalendarCard()
+                            Spacer(Modifier.height(DarkIOSpace.S3))
+                            TipCard()
                         }
                     }
                     BasicText(pageLabels[p], style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("page$p"))
