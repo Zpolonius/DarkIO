@@ -33,6 +33,7 @@ class HomeAndManifestTest {
                 "android.permission.REQUEST_DELETE_PACKAGES",
                 "android.permission.EXPAND_STATUS_BAR",
                 "android.permission.READ_CALENDAR",
+                "android.permission.health.READ_STEPS",
             ),
             perms.filter { !it.startsWith("app.darkio.") }.toSet(),
         )
@@ -52,7 +53,14 @@ class HomeAndManifestTest {
             info.providers.orEmpty().map { it.name to it.exported })
             .filter { it.second }.map { it.first }
             .filterNot { it in debugOnly }
-        assertTrue(exported.toString(), exported == listOf("app.darkio.MainActivity"))
+        assertEquals(
+            setOf(
+                "app.darkio.MainActivity",
+                "app.darkio.HealthRationaleActivity",
+                "app.darkio.ViewPermissionUsageActivity",
+            ),
+            exported.toSet(),
+        )
     }
 
     @Test
