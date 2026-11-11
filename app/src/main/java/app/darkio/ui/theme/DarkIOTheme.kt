@@ -59,6 +59,7 @@ object DarkIOMotion {
 }
 
 object DarkIOSize {
+    val LineWidth = 1.dp
     val TouchMin = 44.dp
     val IconTile = 56.dp
     val IconTileSm = 44.dp
