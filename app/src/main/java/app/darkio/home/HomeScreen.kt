@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
 import app.darkio.dashboard.ClockCard
+import app.darkio.dashboard.TipCard
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
@@ -146,7 +147,16 @@ fun HomeScreen(
                 val shown = remember(apps.visible, slots) { dockSlots(apps.visible, slots) }
                 Box(Modifier.fillMaxSize().padding(bottom = bottomHeight), contentAlignment = Alignment.Center) {
                     if (p == 0) {
-                        ClockCard(Modifier.align(Alignment.TopCenter).padding(horizontal = DarkIOSpace.S5).padding(top = DarkIOSpace.TopInset))
+                        Column(
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(horizontal = DarkIOSpace.S5)
+                                .padding(top = DarkIOSpace.TopInset)
+                        ) {
+                            ClockCard()
+                            Spacer(Modifier.height(DarkIOSpace.S3))
+                            TipCard()
+                        }
                     }
                     BasicText(pageLabels[p], style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("page$p"))
                     if (query.isBlank()) {
