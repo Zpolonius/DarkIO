@@ -40,6 +40,11 @@
     <string name="card_error">err: kunne ikke hente</string>
     <string name="card_retry">prøv igen</string>
     <string name="card_grant_access">giv adgang</string>
+    <string name="steps_title">skridt</string>
+    <string name="steps_grant_access_title">Giv adgang til skridt</string>
+    <string name="steps_grant_access_explanation">Viser dagens skridt fra Health Connect. Sundhedsdata bliver på telefonen.</string>
+    <string name="health_rationale_title">Sundhedsdata i DarkIO</string>
+    <string name="health_rationale_text">DarkIO læser kun dine sundhedsdata for at vise dagens skridt på dashboardet. Data gemmes ikke og forlader aldrig telefonen.</string>
     <string name="calendar_grant_access_title">Giv adgang til kalender</string>
     <string name="calendar_grant_access_explanation">Viser næste aftale de næste 24 timer. Kalenderdata bliver på telefonen.</string>
     <string name="calendar_empty">ingen aftaler</string>
