@@ -93,7 +93,7 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-@Database(entities = [AppChoice::class, PageShortcut::class, WorkoutDay::class], version = 3, exportSchema = true)
+@Database(entities = [AppChoice::class, PageShortcut::class, WorkoutDay::class, WorkoutRecord::class], version = 4, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun choices(): AppChoiceDao
     abstract fun workouts(): WorkoutDao
@@ -104,7 +104,7 @@ abstract class AppDatabase : RoomDatabase() {
         /** Én database pr. proces, så rotation ikke åbner en ny hver gang. */
         fun open(context: Context): AppDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "darkio.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)

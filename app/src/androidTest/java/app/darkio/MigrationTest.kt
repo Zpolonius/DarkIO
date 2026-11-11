@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.data.AppDatabase
 import app.darkio.data.MIGRATION_1_2
 import app.darkio.data.MIGRATION_2_3
+import app.darkio.data.MIGRATION_3_4
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -65,6 +66,36 @@ class MigrationTest {
             it.moveToFirst()
             assertEquals("fav", it.getString(0))
             assertEquals(2, it.getInt(1))
+        }
+        db.query("SELECT packageName, slot FROM page_shortcut WHERE page = 1").use {
+            it.moveToFirst()
+            assertEquals("shortcut", it.getString(0))
+            assertEquals(0, it.getInt(1))
+        }
+    }
+
+    @Test
+    fun migrate3To4AddsWorkoutRecordAndPreservesCompletedDatesAndExistingData() {
+        helper.createDatabase("migration-test-3-4", 3).apply {
+            execSQL("INSERT INTO app_choice VALUES ('fav','fav.Main',0,0,NULL,2)")
+            execSQL("INSERT INTO page_shortcut VALUES (1,'shortcut','shortcut.Main',0,0)")
+            execSQL("INSERT INTO workout_day VALUES (2, 'tirsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', '2026-11-10')")
+            execSQL("INSERT INTO workout_day VALUES (4, 'torsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate("migration-test-3-4", 4, true, MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        db.query("SELECT date FROM workout_record").use {
+            val rows = generateSequence { if (it.moveToNext()) it.getString(0) else null }.toList()
+            assertEquals(listOf("2026-11-10"), rows)
+        }
+        db.query("SELECT dayOfWeek, completedDate FROM workout_day WHERE dayOfWeek = 2").use {
+            it.moveToFirst()
+            assertEquals(2, it.getInt(0))
+            assertEquals("2026-11-10", it.getString(1))
+        }
+        db.query("SELECT packageName FROM app_choice WHERE packageName = 'fav'").use {
+            it.moveToFirst()
+            assertEquals("fav", it.getString(0))
         }
         db.query("SELECT packageName, slot FROM page_shortcut WHERE page = 1").use {
             it.moveToFirst()
