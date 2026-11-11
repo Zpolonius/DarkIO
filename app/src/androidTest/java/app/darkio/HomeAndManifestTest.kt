@@ -34,6 +34,7 @@ class HomeAndManifestTest {
                 "android.permission.EXPAND_STATUS_BAR",
                 "android.permission.READ_CALENDAR",
                 "android.permission.health.READ_STEPS",
+                "android.permission.health.READ_TOTAL_CALORIES_BURNED",
             ),
             perms.filter { !it.startsWith("app.darkio.") }.toSet(),
         )
