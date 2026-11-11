@@ -64,17 +64,6 @@ fun dayStepTimeRange(
     return startOfDay to now
 }
 
-/** Filtrerer skridtmålinger inden for det angivne tidsrum (nulstilles ved midnat, F5). */
-fun filterStepsForDay(
-    records: List<Pair<Instant, Long>>,
-    startOfDay: Instant,
-    endOfDay: Instant,
-): Long {
-    return records
-        .filter { (timestamp, _) -> !timestamp.isBefore(startOfDay) && !timestamp.isAfter(endOfDay) }
-        .sumOf { (_, steps) -> steps }
-}
-
 /** Beregner fremskridt mod skridtmålet som en brøkdel mellem 0.0 og 1.0. */
 fun calculateStepProgress(steps: Long, goal: Long): Float {
     if (goal <= 0L || steps <= 0L) return 0f
@@ -107,18 +96,10 @@ suspend fun loadStepsCardState(
     }
 }
 
-/** Tjekker om Health Connect er installeret og tilgængelig. */
-fun isHealthConnectAvailable(context: Context): Boolean =
-    try {
-        HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
-    } catch (_: Throwable) {
-        false
-    }
-
-/** Tjekker om READ_STEPS-tilladelsen er givet i Health Connect. */
+/** Tjekker om Health Connect er tilgængelig og READ_STEPS-tilladelsen er givet. */
 suspend fun checkStepsPermission(context: Context): Boolean =
     try {
-        if (!isHealthConnectAvailable(context)) {
+        if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) {
             false
         } else {
             val client = HealthConnectClient.getOrCreate(context)

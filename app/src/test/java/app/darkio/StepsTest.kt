@@ -5,18 +5,14 @@ import app.darkio.dashboard.DEFAULT_STEP_GOAL
 import app.darkio.dashboard.StepsData
 import app.darkio.dashboard.calculateStepProgress
 import app.darkio.dashboard.dayStepTimeRange
-import app.darkio.dashboard.filterStepsForDay
 import app.darkio.dashboard.formatStepNumber
 import app.darkio.dashboard.loadStepsCardState
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StepsTest {
@@ -43,21 +39,22 @@ class StepsTest {
 
     @Test
     fun stepCountResetsAtMidnight() {
-        // En måling kl. 23:45 på dag 1
-        val stepRecordYesterday = LocalDateTime.of(2026, 11, 16, 23, 45, 0).atZone(zone).toInstant()
-        val stepsYesterday = listOf(stepRecordYesterday to 5_000L)
-
-        // Før midnat (kl. 23:59:59) er målingen inkluderet i dagens sum
+        // Før midnat (kl. 23:59:59) dækker intervallet dag 1 fra 00:00:00
         val beforeMidnight = LocalDateTime.of(2026, 11, 16, 23, 59, 59).atZone(zone).toInstant()
         val (startBefore, endBefore) = dayStepTimeRange(beforeMidnight, zone)
-        val stepsBeforeMidnight = filterStepsForDay(stepsYesterday, startBefore, endBefore)
-        assertEquals(5_000L, stepsBeforeMidnight)
+        val expectedStartBefore = LocalDateTime.of(2026, 11, 16, 0, 0, 0).atZone(zone).toInstant()
+        assertEquals(expectedStartBefore, startBefore)
+        assertEquals(beforeMidnight, endBefore)
 
-        // Lige efter midnat (kl. 00:00:01 på dag 2) nulstilles tidsintervallet
+        // Lige efter midnat (kl. 00:00:01 på dag 2) nulstilles intervallets start til dag 2 kl. 00:00:00
         val pastMidnight = LocalDateTime.of(2026, 11, 17, 0, 0, 1).atZone(zone).toInstant()
         val (startAfter, endAfter) = dayStepTimeRange(pastMidnight, zone)
-        val stepsAfterMidnight = filterStepsForDay(stepsYesterday, startAfter, endAfter)
-        assertEquals(0L, stepsAfterMidnight)
+        val expectedStartAfter = LocalDateTime.of(2026, 11, 17, 0, 0, 0).atZone(zone).toInstant()
+        assertEquals(expectedStartAfter, startAfter)
+        assertEquals(pastMidnight, endAfter)
+
+        // Dag 2 starter efter dag 1s afslutning, så gårsdagens aggregering ikke medregnes
+        assertEquals(true, startAfter.isAfter(endBefore))
     }
 
     @Test
