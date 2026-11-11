@@ -50,6 +50,17 @@
     <string name="workout_rest_day">hviledag</string>
     <string name="workout_mark_completed">markér som gennemført</string>
     <string name="workout_completed">gennemført</string>
+    <string name="workout_streak">%1$d pas i træk</string>
+
+    <string-array name="workout_week_days">
+        <item>man</item>
+        <item>tir</item>
+        <item>ons</item>
+        <item>tor</item>
+        <item>fre</item>
+        <item>lør</item>
+        <item>søn</item>
+    </string-array>
 
     <string-array name="vibe_tips">
         <item>Skriv testen først — koden følger</item>

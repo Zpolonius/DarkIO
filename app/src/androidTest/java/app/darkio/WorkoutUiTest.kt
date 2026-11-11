@@ -17,16 +17,27 @@ import java.time.LocalDate
 import org.junit.Rule
 import org.junit.Test
 
+import app.darkio.data.WorkoutRecord
+
 private class FakeWorkoutDao(
     private val data: MutableMap<Int, WorkoutDay> = mutableMapOf(),
+    private val completed: MutableSet<String> = mutableSetOf(),
 ) : WorkoutDao() {
+    init {
+        data.values.mapNotNull { it.completedDate }.forEach { completed.add(it) }
+    }
     override suspend fun getWorkoutForDay(dayOfWeek: Int): WorkoutDay? = data[dayOfWeek]
+    override suspend fun getAllWorkouts(): List<WorkoutDay> = data.values.sortedBy { it.dayOfWeek }
+    override suspend fun getCompletedDates(): List<String> = completed.sorted()
     override suspend fun upsert(workout: WorkoutDay) { data[workout.dayOfWeek] = workout }
+    override suspend fun insertCompleted(record: WorkoutRecord) { completed.add(record.date) }
+    override suspend fun deleteCompleted(date: String) { completed.remove(date) }
     override suspend fun setCompleted(dayOfWeek: Int, completed: Boolean, dateStr: String) {
         val existing = data[dayOfWeek]
         if (existing != null) {
             data[dayOfWeek] = existing.copy(completedDate = if (completed) dateStr else null)
         }
+        if (completed) this.completed.add(dateStr) else this.completed.remove(dateStr)
     }
 }
 
@@ -92,5 +103,42 @@ class WorkoutUiTest {
         rule.waitForIdle()
 
         rule.onNodeWithTag("page1").assertIsDisplayed()
+    }
+
+    @Test
+    fun workoutCardShowsWeekOverviewAndStreak() {
+        val tuesday = LocalDate.of(2026, 11, 17) // Tuesday
+        val fakeDao = FakeWorkoutDao(
+            data = mutableMapOf(
+                2 to WorkoutDay(2, "tirsdag: spinning, romaskine, styrke og RPE", "spinning, romaskine, styrke, RPE"),
+                4 to WorkoutDay(4, "torsdag: spinning, romaskine, styrke og RPE", "spinning, romaskine, styrke, RPE"),
+                7 to WorkoutDay(7, "søndag: spinning, romaskine, styrke og RPE", "spinning, romaskine, styrke, RPE"),
+            ),
+            completed = mutableSetOf(
+                "2026-11-12", // torsdag
+                "2026-11-15", // søndag
+            ),
+        )
+
+        rule.setContent {
+            WorkoutCard(dao = fakeDao, now = { tuesday })
+        }
+
+        // Ugeoversigten vises med de 7 dage
+        rule.onNodeWithTag("workoutWeek").assertIsDisplayed()
+        listOf("man", "tir", "ons", "tor", "fre", "lør", "søn").forEach {
+            rule.onNodeWithText(it).assertIsDisplayed()
+        }
+
+        // 2 pas i træk før tirsdagens pas er gennemført
+        rule.onNodeWithText("2 pas i træk").assertIsDisplayed()
+
+        // Gennemfør tirsdagens pas
+        rule.onNodeWithText("markér som gennemført").performClick()
+        rule.waitForIdle()
+
+        // Nu er stimen 3 pas i træk
+        rule.onNodeWithText("3 pas i træk").assertIsDisplayed()
+        rule.onNodeWithText("gennemført").assertIsDisplayed()
     }
 }
