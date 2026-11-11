@@ -12,6 +12,20 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 class VibeTipsTest {
+    companion object {
+        init {
+            try {
+                val field = android.os.Build.VERSION::class.java.getField("SDK_INT")
+                val unsafeField = sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe")
+                unsafeField.isAccessible = true
+                val unsafe = unsafeField.get(null) as sun.misc.Unsafe
+                val base = unsafe.staticFieldBase(field)
+                val offset = unsafe.staticFieldOffset(field)
+                unsafe.putInt(base, offset, 35)
+            } catch (_: Throwable) {}
+        }
+    }
+
     @get:Rule
     val folder = TemporaryFolder()
 

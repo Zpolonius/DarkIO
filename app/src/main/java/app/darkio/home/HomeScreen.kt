@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
+import app.darkio.dashboard.CalendarCard
 import app.darkio.dashboard.ClockCard
 import app.darkio.dashboard.TipCard
 import app.darkio.data.AppCategory
@@ -150,10 +151,13 @@ fun HomeScreen(
                         Column(
                             Modifier
                                 .align(Alignment.TopCenter)
+                                .fillMaxWidth()
                                 .padding(horizontal = DarkIOSpace.S5)
-                                .padding(top = DarkIOSpace.TopInset)
+                                .padding(top = DarkIOSpace.TopInset),
                         ) {
                             ClockCard()
+                            Spacer(Modifier.height(DarkIOSpace.S3))
+                            CalendarCard()
                             Spacer(Modifier.height(DarkIOSpace.S3))
                             TipCard()
                         }
