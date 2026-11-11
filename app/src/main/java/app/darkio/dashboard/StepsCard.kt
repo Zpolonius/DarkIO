@@ -156,6 +156,7 @@ fun StepsCard(
     modifier: Modifier = Modifier,
     loadSteps: (suspend () -> Long)? = null,
     hasPermission: (suspend () -> Boolean)? = null,
+    onGrantAccess: (() -> Unit)? = null,
     goal: Long = DEFAULT_STEP_GOAL,
     now: () -> Instant = Instant::now,
     zoneId: ZoneId = ZoneId.systemDefault(),
@@ -176,6 +177,15 @@ fun StepsCard(
         permissionAttempt++
     }
 
+    val actualOnGrantAccess: () -> Unit = onGrantAccess ?: {
+        try {
+            launcher.launch(STEPS_PERMISSIONS)
+        } catch (_: Throwable) {
+            permissionAttempt++
+        }
+        Unit
+    }
+
     LoadedCard(
         load = {
             loadStepsCardState(
@@ -187,13 +197,7 @@ fun StepsCard(
         modifier = modifier,
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
         reloadTrigger = permissionAttempt,
-        onGrantAccess = {
-            try {
-                launcher.launch(STEPS_PERMISSIONS)
-            } catch (_: Throwable) {
-                permissionAttempt++
-            }
-        },
+        onGrantAccess = actualOnGrantAccess,
         needsAccessTitle = stringResource(R.string.steps_grant_access_title),
         needsAccessExplanation = stringResource(R.string.steps_grant_access_explanation),
     ) { data ->
