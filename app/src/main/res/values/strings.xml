@@ -37,4 +37,7 @@
     <string name="category_tool">Værktøj</string>
     <string name="category_other">Andet</string>
     <string name="drawer_header">~/apps/%1$s · %2$d stk</string>
+    <string name="card_error">err: kunne ikke hente</string>
+    <string name="card_retry">prøv igen</string>
+    <string name="card_grant_access">giv adgang</string>
 </resources>
