@@ -64,11 +64,7 @@ val CALORIES_PERMISSIONS: Set<String> = setOf(HealthPermission.getReadPermission
 fun dayCaloriesTimeRange(
     now: Instant = Instant.now(),
     zoneId: ZoneId = ZoneId.systemDefault(),
-): Pair<Instant, Instant> {
-    val localDate = now.atZone(zoneId).toLocalDate()
-    val startOfDay = localDate.atStartOfDay(zoneId).toInstant()
-    return startOfDay to now
-}
+): Pair<Instant, Instant> = now.atZone(zoneId).toLocalDate().atStartOfDay(zoneId).toInstant() to now
 
 /** Beregner summen af forbrændte kilokalorier for et givet interval [dayRange]. */
 fun calculateCaloriesSum(
@@ -76,10 +72,7 @@ fun calculateCaloriesSum(
     dayRange: Pair<Instant, Instant>,
 ): Long {
     val (start, end) = dayRange
-    val totalKcal = samples
-        .filter { it.startTime >= start && it.endTime <= end }
-        .sumOf { it.kilocalories }
-    return round(totalKcal).toLong()
+    return round(samples.filter { it.startTime >= start && it.endTime <= end }.sumOf { it.kilocalories }).toLong()
 }
 
 /** Formaterer tal med dansk tusindtalsseparator. */
@@ -93,12 +86,10 @@ suspend fun loadCaloriesCardState(
     hasAccess: suspend () -> Boolean,
     queryCalories: suspend () -> Long,
     isFoodAdvisorInstalled: suspend () -> Boolean = { true },
-): CardState<CaloriesData> {
-    if (!hasAccess()) return CardState.NeedsAccess
-    return try {
-        val calories = queryCalories()
-        val foodAdvisorInstalled = isFoodAdvisorInstalled()
-        CardState.Content(CaloriesData(calories = calories, isFoodAdvisorInstalled = foodAdvisorInstalled))
+): CardState<CaloriesData> =
+    if (!hasAccess()) CardState.NeedsAccess
+    else try {
+        CardState.Content(CaloriesData(queryCalories(), isFoodAdvisorInstalled()))
     } catch (e: CancellationException) {
         throw e
     } catch (_: SecurityException) {
@@ -106,18 +97,12 @@ suspend fun loadCaloriesCardState(
     } catch (_: Throwable) {
         CardState.Error
     }
-}
 
 /** Tjekker om Health Connect er tilgængelig og READ_TOTAL_CALORIES_BURNED-tilladelsen er givet. */
 suspend fun checkCaloriesPermission(context: Context): Boolean =
     try {
-        if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) {
-            false
-        } else {
-            val client = HealthConnectClient.getOrCreate(context)
-            val granted = client.permissionController.getGrantedPermissions()
-            granted.containsAll(CALORIES_PERMISSIONS)
-        }
+        HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE &&
+            HealthConnectClient.getOrCreate(context).permissionController.getGrantedPermissions().containsAll(CALORIES_PERMISSIONS)
     } catch (_: Throwable) {
         false
     }
@@ -128,33 +113,18 @@ suspend fun queryHealthConnectCalories(
     now: Instant = Instant.now(),
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): Long = withContext(Dispatchers.IO) {
-    val client = HealthConnectClient.getOrCreate(context)
     val (startTime, endTime) = dayCaloriesTimeRange(now, zoneId)
-    val response = client.aggregate(
-        AggregateRequest(
-            metrics = setOf(TotalCaloriesBurnedRecord.ENERGY_TOTAL),
-            timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
-        ),
+    val response = HealthConnectClient.getOrCreate(context).aggregate(
+        AggregateRequest(setOf(TotalCaloriesBurnedRecord.ENERGY_TOTAL), TimeRangeFilter.between(startTime, endTime)),
     )
-    val energy = response[TotalCaloriesBurnedRecord.ENERGY_TOTAL]
-    energy?.inKilocalories?.let { round(it).toLong() } ?: 0L
+    response[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories?.let { round(it).toLong() } ?: 0L
 }
 
 /** Tjekker om FoodAdvisor (io.foodvisor.foodvisor) er installeret på enheden (F18). */
 fun isFoodAdvisorInstalled(context: Context): Boolean =
     try {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.packageManager.getPackageInfo(
-                FOODVISOR_PACKAGE,
-                PackageManager.PackageInfoFlags.of(0),
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            context.packageManager.getPackageInfo(FOODVISOR_PACKAGE, 0)
-        }
+        context.packageManager.getPackageInfo(FOODVISOR_PACKAGE, PackageManager.PackageInfoFlags.of(0))
         true
-    } catch (_: PackageManager.NameNotFoundException) {
-        false
     } catch (_: Throwable) {
         false
     }
@@ -162,10 +132,8 @@ fun isFoodAdvisorInstalled(context: Context): Boolean =
 /** Åbner FoodAdvisor hvis appen er installeret. */
 fun openFoodAdvisor(context: Context) {
     try {
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(FOODVISOR_PACKAGE)
-        if (launchIntent != null) {
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(launchIntent)
+        context.packageManager.getLaunchIntentForPackage(FOODVISOR_PACKAGE)?.let {
+            context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     } catch (_: Throwable) {
         // Ignorer fejl ved åbning
@@ -192,77 +160,45 @@ fun CaloriesCard(
 ) {
     val context = LocalContext.current
     var permissionAttempt by remember { mutableIntStateOf(0) }
-
-    val actualHasPermission: suspend () -> Boolean = hasPermission ?: {
-        checkCaloriesPermission(context)
-    }
-    val actualLoadCalories: suspend () -> Long = loadCalories ?: {
-        queryHealthConnectCalories(context, now(), zoneId)
-    }
-    val actualIsFoodAdvisorInstalled: suspend () -> Boolean = isFoodAdvisorInstalled ?: {
-        isFoodAdvisorInstalled(context)
-    }
-
-    val launcher = rememberLauncherForActivityResult(
-        PermissionController.createRequestPermissionResultContract(),
-    ) {
+    val launcher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
         permissionAttempt++
-    }
-
-    val actualOnGrantAccess: () -> Unit = onGrantAccess ?: {
-        try {
-            launcher.launch(CALORIES_PERMISSIONS)
-        } catch (_: Throwable) {
-            permissionAttempt++
-        }
-        Unit
-    }
-
-    val actualOnOpenFoodAdvisor: () -> Unit = onOpenFoodAdvisor ?: {
-        openFoodAdvisor(context)
     }
 
     LoadedCard(
         load = {
             loadCaloriesCardState(
-                hasAccess = actualHasPermission,
-                queryCalories = actualLoadCalories,
-                isFoodAdvisorInstalled = actualIsFoodAdvisorInstalled,
+                hasAccess = hasPermission ?: { checkCaloriesPermission(context) },
+                queryCalories = loadCalories ?: { queryHealthConnectCalories(context, now(), zoneId) },
+                isFoodAdvisorInstalled = isFoodAdvisorInstalled ?: { isFoodAdvisorInstalled(context) },
             )
         },
         modifier = modifier,
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
         reloadTrigger = permissionAttempt,
-        onGrantAccess = actualOnGrantAccess,
+        onGrantAccess = onGrantAccess ?: {
+            try { launcher.launch(CALORIES_PERMISSIONS) } catch (_: Throwable) { permissionAttempt++ }
+            Unit
+        },
         needsAccessTitle = stringResource(R.string.calories_grant_access_title),
         needsAccessExplanation = stringResource(R.string.calories_grant_access_explanation),
     ) { data ->
         val cardModifier = if (data.isFoodAdvisorInstalled) {
-            Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = actualOnOpenFoodAdvisor)
+            Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onOpenFoodAdvisor ?: { openFoodAdvisor(context) })
         } else {
             Modifier.fillMaxWidth()
         }
 
-        Column(
-            modifier = cardModifier.testTag("caloriesCardContent"),
-        ) {
+        Column(modifier = cardModifier.testTag("caloriesCardContent")) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BasicText(
-                    text = stringResource(R.string.calories_title),
-                    style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
-                )
+                BasicText(stringResource(R.string.calories_title), style = DarkIOType.Item.copy(color = DarkIOColors.Ink))
                 BasicText(
                     text = buildAnnotatedString {
                         append(formatCaloriesNumber(data.calories))
-                        withStyle(SpanStyle(color = DarkIOColors.InkMuted)) {
-                            append(" kcal")
-                        }
+                        withStyle(SpanStyle(color = DarkIOColors.InkMuted)) { append(" kcal") }
                     },
                     style = DarkIOType.Data.copy(color = DarkIOColors.Ink),
                     modifier = Modifier.testTag("caloriesCount"),
@@ -275,15 +211,8 @@ fun CaloriesCard(
                     horizontalArrangement = Arrangement.spacedBy(DarkIOSpace.S1),
                     modifier = Modifier.testTag("caloriesLogFood"),
                 ) {
-                    BasicText(
-                        text = stringResource(R.string.calories_log_food),
-                        style = DarkIOType.Button.copy(color = DarkIOColors.Sun),
-                    )
-                    BasicText(
-                        text = "↗",
-                        style = DarkIOType.Button.copy(color = DarkIOColors.Sun),
-                        modifier = Modifier.testTag("caloriesArrow"),
-                    )
+                    BasicText(stringResource(R.string.calories_log_food), style = DarkIOType.Button.copy(color = DarkIOColors.Sun))
+                    BasicText("↗", style = DarkIOType.Button.copy(color = DarkIOColors.Sun), modifier = Modifier.testTag("caloriesArrow"))
                 }
             }
         }

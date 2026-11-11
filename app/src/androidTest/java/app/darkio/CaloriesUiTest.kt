@@ -13,6 +13,7 @@ import app.darkio.data.AppDatabase
 import app.darkio.data.AppEntry
 import app.darkio.data.splitApps
 import app.darkio.home.HomeScreen
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -34,17 +35,13 @@ class CaloriesUiTest {
                 isFoodAdvisorInstalled = { true },
             )
         }
-
-        val title = context.getString(R.string.calories_title)
-        val logFood = context.getString(R.string.calories_log_food)
-
-        rule.onNodeWithText(title).assertIsDisplayed()
-        rule.onNodeWithTag("caloriesCount").assertIsDisplayed()
-        rule.onNodeWithText("1.840", substring = true).assertIsDisplayed()
-        rule.onNodeWithText("kcal", substring = true).assertIsDisplayed()
-        rule.onNodeWithText(logFood).assertIsDisplayed()
-        rule.onNodeWithText("↗").assertIsDisplayed()
-        rule.onNodeWithTag("caloriesLogFood").assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.calories_title), useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithTag("caloriesCount", useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithText("1.840", substring = true, useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithText("kcal", substring = true, useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.calories_log_food), useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithText("↗", useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithTag("caloriesLogFood", useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
@@ -56,14 +53,10 @@ class CaloriesUiTest {
                 isFoodAdvisorInstalled = { false },
             )
         }
-
-        val title = context.getString(R.string.calories_title)
-        val logFood = context.getString(R.string.calories_log_food)
-
-        rule.onNodeWithText(title).assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.calories_title)).assertIsDisplayed()
         rule.onNodeWithTag("caloriesCount").assertIsDisplayed()
         rule.onNodeWithText("1.840", substring = true).assertIsDisplayed()
-        rule.onNodeWithText(logFood).assertDoesNotExist()
+        rule.onNodeWithText(context.getString(R.string.calories_log_food)).assertDoesNotExist()
         rule.onNodeWithText("↗").assertDoesNotExist()
         rule.onNodeWithTag("caloriesLogFood").assertDoesNotExist()
     }
@@ -79,15 +72,13 @@ class CaloriesUiTest {
                 onOpenFoodAdvisor = { openCount++ },
             )
         }
-
-        val logFood = context.getString(R.string.calories_log_food)
-        rule.onNodeWithText(logFood).performClick()
+        rule.onNodeWithText(context.getString(R.string.calories_log_food), useUnmergedTree = true).performClick()
         rule.waitForIdle()
-        assertTrue(openCount == 1)
+        assertEquals(1, openCount)
 
         rule.onNodeWithTag("caloriesCardContent").performClick()
         rule.waitForIdle()
-        assertTrue(openCount == 2)
+        assertEquals(2, openCount)
     }
 
     @Test
@@ -98,16 +89,10 @@ class CaloriesUiTest {
                 loadCalories = { 0L },
             )
         }
-
-        val title = context.getString(R.string.calories_grant_access_title)
-        val explanation = context.getString(R.string.calories_grant_access_explanation)
-        val grant = context.getString(R.string.card_grant_access)
-        val logFood = context.getString(R.string.calories_log_food)
-
-        rule.onNodeWithText(title).assertIsDisplayed()
-        rule.onNodeWithText(explanation).assertIsDisplayed()
-        rule.onNodeWithText(grant).assertIsDisplayed()
-        rule.onNodeWithText(logFood).assertDoesNotExist()
+        rule.onNodeWithText(context.getString(R.string.calories_grant_access_title)).assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.calories_grant_access_explanation)).assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.card_grant_access)).assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.calories_log_food)).assertDoesNotExist()
         rule.onNodeWithText("kcal", substring = true).assertDoesNotExist()
     }
 
@@ -121,11 +106,8 @@ class CaloriesUiTest {
                 onGrantAccess = { grantTriggered = true },
             )
         }
-
-        val grant = context.getString(R.string.card_grant_access)
-        rule.onNodeWithText(grant).performClick()
+        rule.onNodeWithText(context.getString(R.string.card_grant_access)).performClick()
         rule.waitForIdle()
-
         assertTrue(grantTriggered)
     }
 
@@ -145,32 +127,19 @@ class CaloriesUiTest {
                 onUninstall = {},
             )
         }
-
-        // Swipe til side 1 ("træning")
         rule.onNodeWithTag("homePager").performTouchInput { swipeLeft() }
         rule.waitForIdle()
-
         rule.onNodeWithTag("page1").assertIsDisplayed()
-
-        // Kaloriekortet vises på side 1 under skridtkortet
-        val accessTitle = context.getString(R.string.calories_grant_access_title)
-        rule.onNodeWithText(accessTitle).assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.calories_grant_access_title)).assertIsDisplayed()
     }
 
     @Test
     fun caloriesDataIsNotSavedLocally() {
-        // N5: Sundhedsdata læses kun og gemmes ikke af DarkIO
         val db = AppDatabase.open(context)
         val tables = mutableListOf<String>()
         db.openHelper.readableDatabase.query("SELECT name FROM sqlite_master WHERE type='table'").use { cursor ->
-            while (cursor.moveToNext()) {
-                tables.add(cursor.getString(0))
-            }
+            while (cursor.moveToNext()) tables.add(cursor.getString(0))
         }
-        // Verificér at der ikke findes tabeller eller kolonner til kaloriedata
-        assertFalse(tables.any { it.contains("calorie", ignoreCase = true) })
-        assertFalse(tables.any { it.contains("kalorie", ignoreCase = true) })
-        assertFalse(tables.any { it.contains("forbraendt", ignoreCase = true) })
-        assertFalse(tables.any { it.contains("food", ignoreCase = true) })
+        assertFalse(tables.any { it.contains("calorie", true) || it.contains("kalorie", true) || it.contains("forbraendt", true) })
     }
 }

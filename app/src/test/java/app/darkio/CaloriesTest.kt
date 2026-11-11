@@ -18,141 +18,85 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CaloriesTest {
-
     private val zone = ZoneId.of("UTC")
+    private fun instant(day: Int, hour: Int, minute: Int = 0, second: Int = 0) =
+        LocalDateTime.of(2026, 11, day, hour, minute, second).atZone(zone).toInstant()
 
     @Test
     fun dayCaloriesTimeRangeStartsAtMidnightOfCurrentDay() {
-        val now = LocalDateTime.of(2026, 11, 16, 14, 30, 0).atZone(zone).toInstant()
+        val now = instant(16, 14, 30)
         val (start, end) = dayCaloriesTimeRange(now, zone)
-
-        val expectedStart = LocalDateTime.of(2026, 11, 16, 0, 0, 0).atZone(zone).toInstant()
-        assertEquals(expectedStart, start)
+        assertEquals(instant(16, 0), start)
         assertEquals(now, end)
     }
 
     @Test
     fun caloriesResetsAtMidnight() {
-        // Før midnat (kl. 23:59:59) dækker intervallet dag 1 fra 00:00:00
-        val beforeMidnight = LocalDateTime.of(2026, 11, 16, 23, 59, 59).atZone(zone).toInstant()
+        val beforeMidnight = instant(16, 23, 59, 59)
         val (startBefore, endBefore) = dayCaloriesTimeRange(beforeMidnight, zone)
-        val expectedStartBefore = LocalDateTime.of(2026, 11, 16, 0, 0, 0).atZone(zone).toInstant()
-        assertEquals(expectedStartBefore, startBefore)
+        assertEquals(instant(16, 0), startBefore)
         assertEquals(beforeMidnight, endBefore)
 
-        // Lige efter midnat (kl. 00:00:01 på dag 2) nulstilles intervallets start til dag 2 kl. 00:00:00
-        val pastMidnight = LocalDateTime.of(2026, 11, 17, 0, 0, 1).atZone(zone).toInstant()
+        val pastMidnight = instant(17, 0, 0, 1)
         val (startAfter, endAfter) = dayCaloriesTimeRange(pastMidnight, zone)
-        val expectedStartAfter = LocalDateTime.of(2026, 11, 17, 0, 0, 0).atZone(zone).toInstant()
-        assertEquals(expectedStartAfter, startAfter)
+        assertEquals(instant(17, 0), startAfter)
         assertEquals(pastMidnight, endAfter)
-
-        // Dag 2 starter efter dag 1s afslutning, så gårsdagens aggregering ikke medregnes
         assertTrue(startAfter.isAfter(endBefore))
     }
 
     @Test
     fun calculateCaloriesSumAggregatesOnlyCurrentDay() {
-        val day1Start = LocalDateTime.of(2026, 11, 16, 0, 0, 0).atZone(zone).toInstant()
-        val now = LocalDateTime.of(2026, 11, 16, 18, 0, 0).atZone(zone).toInstant()
-        val dayRange = day1Start to now
-
+        val range = instant(16, 0) to instant(16, 18)
         val samples = listOf(
-            // Gårsdagens forbrænding (før midnat) - skal ignoreres
-            CalorieSample(
-                startTime = LocalDateTime.of(2026, 11, 15, 22, 0, 0).atZone(zone).toInstant(),
-                endTime = LocalDateTime.of(2026, 11, 15, 23, 0, 0).atZone(zone).toInstant(),
-                kilocalories = 150.0,
-            ),
-            // Dagens morgentræning
-            CalorieSample(
-                startTime = LocalDateTime.of(2026, 11, 16, 7, 0, 0).atZone(zone).toInstant(),
-                endTime = LocalDateTime.of(2026, 11, 16, 8, 0, 0).atZone(zone).toInstant(),
-                kilocalories = 450.4,
-            ),
-            // Dagens eftermiddagstur
-            CalorieSample(
-                startTime = LocalDateTime.of(2026, 11, 16, 13, 0, 0).atZone(zone).toInstant(),
-                endTime = LocalDateTime.of(2026, 11, 16, 14, 0, 0).atZone(zone).toInstant(),
-                kilocalories = 320.3,
-            ),
-            // Fremtidig registrering efter 'now' - skal ignoreres
-            CalorieSample(
-                startTime = LocalDateTime.of(2026, 11, 16, 19, 0, 0).atZone(zone).toInstant(),
-                endTime = LocalDateTime.of(2026, 11, 16, 20, 0, 0).atZone(zone).toInstant(),
-                kilocalories = 200.0,
-            ),
+            CalorieSample(instant(15, 22), instant(15, 23), 150.0),
+            CalorieSample(instant(16, 7), instant(16, 8), 450.4),
+            CalorieSample(instant(16, 13), instant(16, 14), 320.3),
+            CalorieSample(instant(16, 19), instant(16, 20), 200.0),
         )
-
-        // Forventet sum: 450.4 + 320.3 = 770.7 -> afrundet 771
-        val sum = calculateCaloriesSum(samples, dayRange)
-        assertEquals(771L, sum)
+        assertEquals(771L, calculateCaloriesSum(samples, range))
     }
 
     @Test
     fun formatCaloriesNumberFormatsWithDanishGrouping() {
-        val locale = Locale.forLanguageTag("da")
-        assertEquals("0", formatCaloriesNumber(0L, locale))
-        assertEquals("500", formatCaloriesNumber(500L, locale))
-        assertEquals("1.840", formatCaloriesNumber(1_840L, locale))
-        assertEquals("12.345", formatCaloriesNumber(12_345L, locale))
+        val da = Locale.forLanguageTag("da")
+        assertEquals("0", formatCaloriesNumber(0L, da))
+        assertEquals("500", formatCaloriesNumber(500L, da))
+        assertEquals("1.840", formatCaloriesNumber(1_840L, da))
+        assertEquals("12.345", formatCaloriesNumber(12_345L, da))
     }
 
     @Test
     fun loadCaloriesCardStateReturnsNeedsAccessWhenNoAccess() = runTest {
-        val state = loadCaloriesCardState(
-            hasAccess = { false },
-            queryCalories = { 1_840L },
-            isFoodAdvisorInstalled = { true },
-        )
+        val state = loadCaloriesCardState({ false }, { 1_840L }, { true })
         assertEquals(CardState.NeedsAccess, state)
     }
 
     @Test
     fun loadCaloriesCardStateReturnsContentWhenAccessGranted() = runTest {
-        val state = loadCaloriesCardState(
-            hasAccess = { true },
-            queryCalories = { 1_840L },
-            isFoodAdvisorInstalled = { true },
-        )
-        assertEquals(CardState.Content(CaloriesData(calories = 1_840L, isFoodAdvisorInstalled = true)), state)
+        val state = loadCaloriesCardState({ true }, { 1_840L }, { true })
+        assertEquals(CardState.Content(CaloriesData(1_840L, true)), state)
     }
 
     @Test
     fun loadCaloriesCardStateReturnsContentWithFoodAdvisorNotInstalled() = runTest {
-        val state = loadCaloriesCardState(
-            hasAccess = { true },
-            queryCalories = { 1_840L },
-            isFoodAdvisorInstalled = { false },
-        )
-        assertEquals(CardState.Content(CaloriesData(calories = 1_840L, isFoodAdvisorInstalled = false)), state)
-        val content = state as CardState.Content
-        assertFalse(content.value.isFoodAdvisorInstalled)
+        val state = loadCaloriesCardState({ true }, { 1_840L }, { false })
+        assertEquals(CardState.Content(CaloriesData(1_840L, false)), state)
     }
 
     @Test
     fun loadCaloriesCardStateReturnsNeedsAccessOnSecurityException() = runTest {
-        val state = loadCaloriesCardState(
-            hasAccess = { true },
-            queryCalories = { throw SecurityException("Mangler READ_TOTAL_CALORIES_BURNED") },
-        )
+        val state = loadCaloriesCardState({ true }, { throw SecurityException("Denied") })
         assertEquals(CardState.NeedsAccess, state)
     }
 
     @Test
     fun loadCaloriesCardStateReturnsErrorOnOtherThrowable() = runTest {
-        val state = loadCaloriesCardState(
-            hasAccess = { true },
-            queryCalories = { error("Health Connect servicefejl") },
-        )
+        val state = loadCaloriesCardState({ true }, { error("Failure") })
         assertEquals(CardState.Error, state)
     }
 
     @Test(expected = CancellationException::class)
     fun loadCaloriesCardStateRethrowsCancellationException() = runTest {
-        loadCaloriesCardState(
-            hasAccess = { true },
-            queryCalories = { throw CancellationException("Annulleret") },
-        )
+        loadCaloriesCardState({ true }, { throw CancellationException("Cancelled") })
     }
 }
