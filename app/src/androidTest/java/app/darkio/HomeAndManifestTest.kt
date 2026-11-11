@@ -28,7 +28,14 @@ class HomeAndManifestTest {
         assertFalse(perms.contains("android.permission.INTERNET"))
         assertFalse(perms.contains("android.permission.QUERY_ALL_PACKAGES"))
         // N4: kun de tilladte tilladelser indtil nu
-        assertEquals(setOf("android.permission.REQUEST_DELETE_PACKAGES", "android.permission.EXPAND_STATUS_BAR"), perms.filter { !it.startsWith("app.darkio.") }.toSet())
+        assertEquals(
+            setOf(
+                "android.permission.REQUEST_DELETE_PACKAGES",
+                "android.permission.EXPAND_STATUS_BAR",
+                "android.permission.READ_CALENDAR",
+            ),
+            perms.filter { !it.startsWith("app.darkio.") }.toSet(),
+        )
     }
 
     // exported test/tooling activities that exist only in the debug build

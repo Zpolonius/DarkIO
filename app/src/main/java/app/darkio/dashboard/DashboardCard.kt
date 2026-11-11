@@ -61,6 +61,9 @@ fun <T> LoadedCard(
     modifier: Modifier = Modifier,
     refreshAfterMs: (() -> Long)? = null,
     onGrantAccess: () -> Unit = {},
+    needsAccessTitle: String? = null,
+    needsAccessExplanation: String? = null,
+    reloadTrigger: Any? = null,
     content: @Composable (T) -> Unit,
 ) {
     var state by remember { mutableStateOf<CardState<T>?>(null) }
@@ -68,7 +71,7 @@ fun <T> LoadedCard(
     val currentLoad by rememberUpdatedState(load)
     val currentRefresh by rememberUpdatedState(refreshAfterMs)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(attempt) {
+    LaunchedEffect(attempt, reloadTrigger) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
                 state = loadCard(currentLoad)
@@ -86,7 +89,23 @@ fun <T> LoadedCard(
     ) {
         when (val s = state) {
             is CardState.Content -> content(s.value)
-            CardState.NeedsAccess -> CardMessage(null, stringResource(R.string.card_grant_access), onGrantAccess)
+            CardState.NeedsAccess -> {
+                if (needsAccessTitle != null) {
+                    BasicText(
+                        needsAccessTitle,
+                        modifier = Modifier.padding(bottom = DarkIOSpace.S1),
+                        style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                    )
+                }
+                if (needsAccessExplanation != null) {
+                    BasicText(
+                        needsAccessExplanation,
+                        modifier = Modifier.padding(bottom = DarkIOSpace.S2),
+                        style = DarkIOType.Data.copy(color = DarkIOColors.InkMuted),
+                    )
+                }
+                CardMessage(null, stringResource(R.string.card_grant_access), onGrantAccess)
+            }
             CardState.Error -> CardMessage(stringResource(R.string.card_error), stringResource(R.string.card_retry)) { attempt++ }
             null -> Unit
         }

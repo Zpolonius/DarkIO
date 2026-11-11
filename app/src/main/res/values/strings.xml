@@ -40,4 +40,10 @@
     <string name="card_error">err: kunne ikke hente</string>
     <string name="card_retry">prøv igen</string>
     <string name="card_grant_access">giv adgang</string>
+    <string name="calendar_grant_access_title">Giv adgang til kalender</string>
+    <string name="calendar_grant_access_explanation">Viser næste aftale de næste 24 timer. Kalenderdata bliver på telefonen.</string>
+    <string name="calendar_empty">ingen aftaler</string>
+    <string name="calendar_all_day">hele dagen</string>
+    <string name="calendar_tomorrow">i morgen %1$s</string>
+    <string name="calendar_untitled">(uden titel)</string>
 </resources>
