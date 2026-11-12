@@ -15,7 +15,6 @@ import app.darkio.data.AppDatabase
 import app.darkio.data.AppEntry
 import app.darkio.data.splitApps
 import app.darkio.home.HomeScreen
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
