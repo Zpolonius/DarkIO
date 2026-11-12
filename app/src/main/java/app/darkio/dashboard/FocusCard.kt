@@ -168,7 +168,8 @@ suspend fun loadFocusCardState(
 /** Tjekker om appen har adgang til brugsdata (PACKAGE_USAGE_STATS). */
 fun hasUsageStatsPermission(context: Context): Boolean {
     val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
-    val mode = appOps.unsafeCheckOpNoThrow(
+    @Suppress("DEPRECATION")
+    val mode = appOps.checkOpNoThrow(
         AppOpsManager.OPSTR_GET_USAGE_STATS,
         android.os.Process.myUid(),
         context.packageName,
@@ -236,6 +237,7 @@ fun FocusCard(
     hasPermission: (suspend () -> Boolean)? = null,
     onGrantAccess: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    reloadTrigger: Any? = null,
     now: () -> Instant = Instant::now,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ) {
@@ -266,7 +268,7 @@ fun FocusCard(
             modifier
         },
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
-        reloadTrigger = permissionAttempt,
+        reloadTrigger = if (reloadTrigger != null) (reloadTrigger to permissionAttempt) else permissionAttempt,
         onGrantAccess = actualOnGrantAccess,
         needsAccessTitle = stringResource(R.string.focus_grant_access_title),
         needsAccessExplanation = stringResource(R.string.focus_grant_access_explanation),

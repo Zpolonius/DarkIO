@@ -49,6 +49,7 @@ import app.darkio.R
 import app.darkio.dashboard.CalendarCard
 import app.darkio.dashboard.CaloriesCard
 import app.darkio.dashboard.ClockCard
+import app.darkio.dashboard.FocusCard
 import app.darkio.dashboard.StepsCard
 import app.darkio.dashboard.TipCard
 import app.darkio.dashboard.WorkoutCard
@@ -161,6 +162,8 @@ fun HomeScreen(
                             ClockCard()
                             Spacer(Modifier.height(DarkIOSpace.S3))
                             CalendarCard()
+                            Spacer(Modifier.height(DarkIOSpace.S3))
+                            FocusCard()
                             Spacer(Modifier.height(DarkIOSpace.S3))
                             TipCard()
                         }
