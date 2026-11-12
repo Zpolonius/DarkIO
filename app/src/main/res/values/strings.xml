@@ -43,8 +43,12 @@
     <string name="steps_title">skridt</string>
     <string name="steps_grant_access_title">Giv adgang til skridt</string>
     <string name="steps_grant_access_explanation">Viser dagens skridt fra Health Connect. Sundhedsdata bliver på telefonen.</string>
+    <string name="calories_title">forbrændt</string>
+    <string name="calories_grant_access_title">Giv adgang til forbrændte kalorier</string>
+    <string name="calories_grant_access_explanation">Viser forbrændte kalorier fra Health Connect. Sundhedsdata bliver på telefonen.</string>
+    <string name="calories_log_food">+ log mad</string>
     <string name="health_rationale_title">Sundhedsdata i DarkIO</string>
-    <string name="health_rationale_text">DarkIO læser kun dine sundhedsdata for at vise dagens skridt på dashboardet. Data gemmes ikke og forlader aldrig telefonen.</string>
+    <string name="health_rationale_text">DarkIO læser kun dine sundhedsdata for at vise dagens skridt og forbrændte kalorier på dashboardet. Data gemmes ikke og forlader aldrig telefonen.</string>
     <string name="calendar_grant_access_title">Giv adgang til kalender</string>
     <string name="calendar_grant_access_explanation">Viser næste aftale de næste 24 timer. Kalenderdata bliver på telefonen.</string>
     <string name="calendar_empty">ingen aftaler</string>
