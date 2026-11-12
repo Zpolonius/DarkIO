@@ -9,6 +9,7 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -141,22 +143,27 @@ fun TypewriterText(
         }
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "cursorBlink")
-    val cursorAlpha by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = (DarkIOMotion.TypewriterBlinkMs * 2).toInt() // 1060ms
-                1f at 0
-                1f at (DarkIOMotion.TypewriterBlinkMs - 1).toInt()
-                0f at DarkIOMotion.TypewriterBlinkMs.toInt()
-                0f at (DarkIOMotion.TypewriterBlinkMs * 2 - 1).toInt()
-            },
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "cursorAlpha",
-    )
+    val cursorAlpha = if (!isTyping && !reduceMotion) {
+        val infiniteTransition = rememberInfiniteTransition(label = "cursorBlink")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0f,
+            animationSpec = infiniteRepeatable(
+                animation = keyframes {
+                    durationMillis = (DarkIOMotion.TypewriterBlinkMs * 2).toInt() // 1060ms
+                    1f at 0
+                    1f at (DarkIOMotion.TypewriterBlinkMs - 1).toInt()
+                    0f at DarkIOMotion.TypewriterBlinkMs.toInt()
+                    0f at (DarkIOMotion.TypewriterBlinkMs * 2 - 1).toInt()
+                },
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "cursorAlpha",
+        )
+        alpha
+    } else {
+        1f
+    }
 
     val inlineContent = mapOf(
         "cursor" to InlineTextContent(
@@ -171,7 +178,7 @@ fun TypewriterText(
                     .padding(start = 2.dp)
                     .size(DarkIOSize.CursorWidth, DarkIOSize.CursorHeight)
                     .graphicsLayer {
-                        alpha = if (!isTyping && !reduceMotion) cursorAlpha else 1f
+                        alpha = cursorAlpha
                     }
                     .background(DarkIOColors.Accent),
             )
@@ -179,6 +186,24 @@ fun TypewriterText(
     )
 
     val fullAccessibleText = prefix + text
+
+    val tapModifier = when {
+        isTyping -> Modifier.pointerInput(key, today) {
+            detectTapGestures {
+                displayedChars = text.length
+                isTyping = false
+                TypewriterPlayed.markPlayed(key, today)
+                onTap?.invoke()
+            }
+        }
+        onTap != null -> Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+        ) {
+            onTap()
+        }
+        else -> Modifier
+    }
 
     BasicText(
         text = buildAnnotatedString {
@@ -194,16 +219,6 @@ fun TypewriterText(
         inlineContent = inlineContent,
         modifier = modifier
             .semantics { contentDescription = fullAccessibleText }
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
-                if (isTyping) {
-                    displayedChars = text.length
-                    isTyping = false
-                    TypewriterPlayed.markPlayed(key, today)
-                }
-                onTap?.invoke()
-            },
+            .then(tapModifier),
     )
 }

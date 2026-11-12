@@ -68,6 +68,7 @@ class TypewriterUiTest {
 
         // Tryk springer over og viser hele teksten med det samme
         rule.onNode(hasContentDescription(sample)).performClick()
+        rule.mainClock.advanceTimeBy(50)
         rule.waitForIdle()
 
         rule.onNode(hasText(sample, substring = true)).assertIsDisplayed()
