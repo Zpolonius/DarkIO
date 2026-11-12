@@ -25,6 +25,7 @@ import androidx.compose.ui.text.withStyle
 import app.darkio.R
 import app.darkio.data.darkIoPrefs
 import app.darkio.data.getOrChooseDailyTip
+import app.darkio.ui.TypewriterText
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOSpace
 import app.darkio.ui.theme.DarkIOType
@@ -73,12 +74,12 @@ fun TipCard(modifier: Modifier = Modifier, now: () -> LocalDate = LocalDate::now
                     }
                 )
         ) {
-            BasicText(
-                buildAnnotatedString {
-                    withStyle(SpanStyle(color = DarkIOColors.Accent)) { append("$ ") }
-                    append(tip)
-                },
+            TypewriterText(
+                text = tip,
+                prefix = "$ ",
+                prefixColor = DarkIOColors.Accent,
                 style = DarkIOType.Data.copy(color = DarkIOColors.Ink),
+                now = now,
             )
             if (copiedMessage) {
                 Spacer(Modifier.height(DarkIOSpace.S2))

@@ -68,6 +68,7 @@ import app.darkio.drawer.SearchField
 import app.darkio.drawer.SearchResultsPane
 import app.darkio.drawer.searchApps
 import app.darkio.settings.HiddenAppsScreen
+import app.darkio.ui.TypewriterText
 import app.darkio.ui.onVerticalSwipe
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOMotion
@@ -230,6 +231,12 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.height(DarkIOSpace.S3))
                     if (!hintSeen) {
+                        TypewriterText(
+                            text = stringResource(R.string.welcome_prompt),
+                            prefix = "$ ",
+                            style = DarkIOType.Data.copy(color = DarkIOColors.Ink),
+                        )
+                        Spacer(Modifier.height(DarkIOSpace.S1))
                         BasicText(stringResource(R.string.hint_swipe_up), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft))
                         Spacer(Modifier.height(DarkIOSpace.S3))
                     }

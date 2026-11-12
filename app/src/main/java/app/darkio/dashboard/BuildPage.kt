@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import app.darkio.R
 import app.darkio.data.darkIoPrefs
 import app.darkio.data.getDailyAndRecentTips
+import app.darkio.ui.TypewriterText
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOShapes
 import app.darkio.ui.theme.DarkIOSize
@@ -95,12 +96,12 @@ fun BuildPage(
                     style = DarkIOType.Label.copy(color = DarkIOColors.InkMuted),
                 )
                 Spacer(Modifier.height(DarkIOSpace.S2))
-                BasicText(
-                    buildAnnotatedString {
-                        withStyle(SpanStyle(color = DarkIOColors.Accent)) { append("$ ") }
-                        append(todayTip)
-                    },
+                TypewriterText(
+                    text = todayTip,
+                    prefix = "$ ",
+                    prefixColor = DarkIOColors.Accent,
                     style = DarkIOType.Metric.copy(color = DarkIOColors.Ink),
+                    now = now,
                     modifier = Modifier.testTag("buildTodayTip"),
                 )
             }
