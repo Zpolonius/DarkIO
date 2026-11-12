@@ -56,6 +56,9 @@ object DarkIOSpace {
 
 object DarkIOMotion {
     const val DrawerMs = 180
+    const val TypewriterCharMs = 16L
+    const val TypewriterMaxMs = 1500L
+    const val TypewriterBlinkMs = 530L
 }
 
 object DarkIOSize {
@@ -74,6 +77,8 @@ object DarkIOSize {
     val PageDot = 6.dp
     val PageDotActiveWidth = 20.dp
     val PageDotHitHeight = 24.dp
+    val CursorWidth = 7.dp
+    val CursorHeight = 15.dp
 }
 
 private val Display = FontFamily(

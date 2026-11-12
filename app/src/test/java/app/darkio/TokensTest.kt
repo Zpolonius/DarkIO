@@ -2,7 +2,10 @@ package app.darkio
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
 import app.darkio.ui.theme.DarkIOColors
+import app.darkio.ui.theme.DarkIOMotion
+import app.darkio.ui.theme.DarkIOSize
 import java.io.File
 import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
@@ -31,6 +34,24 @@ class TokensTest {
             val resolved = Regex("""\{(.+)}""").matchEntire(value)?.let { tokens.getValue(it.groupValues[1]) } ?: value
             assertEquals(name, parse(resolved).toArgb(), kotlinColors.getValue(name).toArgb())
         }
+    }
+
+    @Test
+    fun typewriterAndCursorTokensMatch() {
+        val tokens = Regex(""""name":\s*"([a-z-]+)",\s*"value":\s*"([^"]+)"""")
+            .findAll(json.readText()).associate { it.groupValues[1] to it.groupValues[2] }
+
+        assertEquals("16ms", tokens["typewriter-char-ms"])
+        assertEquals("1500ms", tokens["typewriter-max-ms"])
+        assertEquals("530ms", tokens["typewriter-blink-ms"])
+        assertEquals("7px", tokens["cursor-width"])
+        assertEquals("15px", tokens["cursor-height"])
+
+        assertEquals(16L, DarkIOMotion.TypewriterCharMs)
+        assertEquals(1500L, DarkIOMotion.TypewriterMaxMs)
+        assertEquals(530L, DarkIOMotion.TypewriterBlinkMs)
+        assertEquals(7.dp, DarkIOSize.CursorWidth)
+        assertEquals(15.dp, DarkIOSize.CursorHeight)
     }
 
     private fun parse(v: String): Color =
