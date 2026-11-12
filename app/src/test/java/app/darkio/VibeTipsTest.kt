@@ -1,6 +1,7 @@
 package app.darkio
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import app.darkio.data.getDailyAndRecentTips
 import app.darkio.data.getOrChooseDailyTip
 import java.io.File
 import java.time.LocalDate
@@ -63,5 +64,34 @@ class VibeTipsTest {
         val resetDate = startDate.plusDays(sampleTips.size.toLong())
         val resetTipIndex = getOrChooseDailyTip(store, sampleTips, resetDate)
         assertTrue(resetTipIndex in sampleTips.indices)
+    }
+
+    @Test
+    fun testGetDailyAndRecentTipsFlow() = runTest {
+        val store = PreferenceDataStoreFactory.create(scope = backgroundScope) { File(folder.root, "vibe3.preferences_pb") }
+        val day1 = LocalDate.of(2026, 11, 11)
+        val day2 = day1.plusDays(1)
+        val day3 = day1.plusDays(2)
+
+        // Day 1
+        val data1 = getDailyAndRecentTips(store, sampleTips, day1)
+        assertTrue(data1.todayTip.isNotBlank())
+        // On day 1 without history, recentTips should still provide 2 different tips from pool
+        assertEquals(2, data1.recentTips.size)
+        assertTrue(data1.recentTips.all { it != data1.todayTip })
+
+        // Day 2
+        val data2 = getDailyAndRecentTips(store, sampleTips, day2)
+        assertTrue(data2.todayTip.isNotBlank())
+        assertEquals(2, data2.recentTips.size)
+        assertTrue(data2.recentTips.all { it != data2.todayTip })
+        // Day 1 tip should be among recent tips on day 2
+        assertTrue(data2.recentTips.contains(data1.todayTip))
+
+        // Day 3
+        val data3 = getDailyAndRecentTips(store, sampleTips, day3)
+        assertTrue(data3.todayTip.isNotBlank())
+        assertEquals(2, data3.recentTips.size)
+        assertTrue(data3.recentTips.all { it != data3.todayTip })
     }
 }
