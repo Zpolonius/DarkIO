@@ -118,6 +118,7 @@ fun HomeScreen(
     LaunchedEffect(rowFull) { if (rowFull) { delay(3000); rowFull = false } }
     LaunchedEffect(page) { rowFull = false }
     var bottomHeight by remember { mutableStateOf(0.dp) }
+    var shortcutsHeight by remember { mutableStateOf(DarkIOSize.IconTile + DarkIOSpace.S3 * 2) }
     val density = LocalDensity.current
     val menuApp = menuAppId?.let { id -> apps.visible.firstOrNull { it.id == id } }
     if (menuApp == null) menuAppId = null
@@ -148,47 +149,56 @@ fun HomeScreen(
                     }
                 },
         ) {
-            // Siden og dens genvejsrække skifter side sammen; dokken og søgefeltet står fast nedenfor.
+            // Siden og dens genvejsrække skifter side sammen; sideprikker over genvejsrækken samt dokken og søgefeltet nedenfor står fast.
+            val pageBottomPadding = bottomHeight + shortcutsHeight + DarkIOSpace.S4 + DarkIOSize.PageDotHitHeight + DarkIOSpace.S3
             HorizontalPager(pager, Modifier.fillMaxSize().testTag("homePager")) { p ->
                 val slots = apps.shortcutSlots[p].orEmpty()
                 val shown = remember(apps.visible, slots) { dockSlots(apps.visible, slots) }
-                Box(Modifier.fillMaxSize().padding(bottom = bottomHeight), contentAlignment = Alignment.Center) {
-                    if (p == 0) {
-                        Column(
-                            Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .padding(horizontal = DarkIOSpace.S5)
-                                .padding(top = DarkIOSpace.TopInset),
-                        ) {
-                            ClockCard()
-                            Spacer(Modifier.height(DarkIOSpace.S3))
-                            CalendarCard()
-                            Spacer(Modifier.height(DarkIOSpace.S3))
-                            FocusCard()
-                            Spacer(Modifier.height(DarkIOSpace.S3))
-                            TipCard()
+                Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize().padding(bottom = pageBottomPadding), contentAlignment = Alignment.Center) {
+                        if (p == 0) {
+                            Column(
+                                Modifier
+                                    .align(Alignment.TopCenter)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = DarkIOSpace.S5)
+                                    .padding(top = DarkIOSpace.TopInset),
+                            ) {
+                                ClockCard()
+                                Spacer(Modifier.height(DarkIOSpace.S3))
+                                CalendarCard()
+                                Spacer(Modifier.height(DarkIOSpace.S3))
+                                FocusCard()
+                                Spacer(Modifier.height(DarkIOSpace.S3))
+                                TipCard()
+                            }
+                        } else if (p == 1) {
+                            Column(
+                                Modifier
+                                    .align(Alignment.TopCenter)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = DarkIOSpace.S5)
+                                    .padding(top = DarkIOSpace.TopInset),
+                            ) {
+                                WorkoutCard()
+                                Spacer(Modifier.height(DarkIOSpace.S3))
+                                StepsCard()
+                                Spacer(Modifier.height(DarkIOSpace.S3))
+                                CaloriesCard()
+                            }
+                        } else if (p == 2) {
+                            BuildPage()
                         }
-                    } else if (p == 1) {
-                        Column(
-                            Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .padding(horizontal = DarkIOSpace.S5)
-                                .padding(top = DarkIOSpace.TopInset),
-                        ) {
-                            WorkoutCard()
-                            Spacer(Modifier.height(DarkIOSpace.S3))
-                            StepsCard()
-                            Spacer(Modifier.height(DarkIOSpace.S3))
-                            CaloriesCard()
-                        }
-                    } else if (p == 2) {
-                        BuildPage()
+                        BasicText(pageLabels[p], style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("page$p"))
                     }
-                    BasicText(pageLabels[p], style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("page$p"))
                     if (query.isBlank()) {
-                        Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = DarkIOSpace.S5)) {
+                        Box(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(horizontal = DarkIOSpace.S5)
+                                .padding(bottom = bottomHeight)
+                                .onSizeChanged { shortcutsHeight = with(density) { it.height.toDp() } },
+                        ) {
                             Dock(
                                 shown,
                                 onLaunch,
@@ -203,6 +213,16 @@ fun HomeScreen(
                     }
                 }
             }
+            if (query.isBlank()) {
+                PageDots(
+                    pageLabels,
+                    pager.currentPage,
+                    { scope.launch { pager.animateScrollToPage(it) } },
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = bottomHeight + shortcutsHeight + DarkIOSpace.S4),
+                )
+            }
             Column(
                 Modifier
                     .align(Alignment.BottomCenter)
@@ -210,11 +230,10 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .heightIn(max = maxHeight / 2)
                     .imePadding()
-                    .padding(horizontal = DarkIOSpace.S5, vertical = DarkIOSpace.S5),
+                    .padding(horizontal = DarkIOSpace.S5)
+                    .padding(top = DarkIOSpace.S1, bottom = DarkIOSpace.S5),
             ) {
                 if (query.isBlank()) {
-                    PageDots(pageLabels, pager.currentPage, { scope.launch { pager.animateScrollToPage(it) } }, Modifier.align(Alignment.CenterHorizontally))
-                    Spacer(Modifier.height(DarkIOSpace.S2))
                     if (dockFull) {
                         BasicText(stringResource(R.string.dock_full), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("dockFull"))
                         Spacer(Modifier.height(DarkIOSpace.S3))
