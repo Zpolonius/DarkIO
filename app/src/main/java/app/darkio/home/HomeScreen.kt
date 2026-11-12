@@ -165,11 +165,11 @@ fun HomeScreen(
                                     .padding(top = DarkIOSpace.TopInset),
                             ) {
                                 ClockCard()
-                                Spacer(Modifier.height(DarkIOSpace.S3))
+                                Spacer(Modifier.height(DarkIOSpace.S2))
                                 CalendarCard()
-                                Spacer(Modifier.height(DarkIOSpace.S3))
+                                Spacer(Modifier.height(DarkIOSpace.S2))
                                 FocusCard()
-                                Spacer(Modifier.height(DarkIOSpace.S3))
+                                Spacer(Modifier.height(DarkIOSpace.S2))
                                 TipCard()
                             }
                         } else if (p == 1) {
