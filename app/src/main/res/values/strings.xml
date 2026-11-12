@@ -5,6 +5,7 @@
     <string name="page_training">træning</string>
     <string name="page_build">byg</string>
     <string name="home_all_apps">alle apps</string>
+    <string name="welcome_prompt">darkio --hej</string>
     <string name="hint_swipe_up">// swipe op for alle apps</string>
     <string name="hidden_apps_title">Skjulte apps</string>
     <string name="hidden_apps_note">Skjul er en oprydning, ikke en lås. Appen kan stadig åbnes på andre måder, fx fra systemets indstillinger.</string>

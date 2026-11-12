@@ -33,6 +33,7 @@ import app.darkio.data.AppDatabase
 import app.darkio.data.WorkoutDao
 import app.darkio.data.WorkoutDay
 import app.darkio.data.calculateWorkoutStreak
+import app.darkio.ui.TypewriterText
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOSize
 import app.darkio.ui.theme.DarkIOSpace
@@ -96,12 +97,10 @@ fun WorkoutCard(
                     style = DarkIOType.Button.copy(color = DarkIOColors.Accent),
                 )
             } else {
-                BasicText(
-                    buildAnnotatedString {
-                        append(stringResource(R.string.workout_rest_day))
-                        withStyle(SpanStyle(color = DarkIOColors.Accent)) { append("_") }
-                    },
+                TypewriterText(
+                    text = stringResource(R.string.workout_rest_day),
                     style = DarkIOType.Item.copy(color = DarkIOColors.InkSoft),
+                    now = now,
                 )
             }
             Spacer(Modifier.height(DarkIOSpace.S3))

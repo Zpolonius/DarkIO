@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.core.content.ContextCompat
 import app.darkio.R
+import app.darkio.ui.TypewriterText
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOType
 import java.time.Instant
@@ -191,11 +192,8 @@ fun CalendarCard(
                 style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft),
             )
         } else {
-            BasicText(
-                buildAnnotatedString {
-                    append(stringResource(R.string.calendar_empty))
-                    withStyle(SpanStyle(color = DarkIOColors.Accent)) { append("_") }
-                },
+            TypewriterText(
+                text = stringResource(R.string.calendar_empty),
                 style = DarkIOType.Item.copy(color = DarkIOColors.InkMuted),
             )
         }
