@@ -148,12 +148,13 @@ class PageShortcutsUiTest {
         rule.waitForIdle()
         rule.onNodeWithTag("dockFull").assertIsDisplayed()
         rule.onNodeWithTag("shortcutsFull").assertIsDisplayed()
-        // Rækken, prikkerne, docken og søgefeltets boks (ikke kun tekstfeltet) ligger over hinanden uden overlap og klipning.
-        val row = rule.onNodeWithTag("shortcuts").getUnclippedBoundsInRoot()
+        // Prikkerne, rækken, docken og søgefeltets boks (ikke kun tekstfeltet) ligger over hinanden uden overlap og klipning.
         val dots = rule.onNodeWithTag("pageDot0").getUnclippedBoundsInRoot()
+        val row = rule.onNodeWithTag("shortcuts").getUnclippedBoundsInRoot()
         val dock = rule.onNodeWithTag("dock").getUnclippedBoundsInRoot()
         val search = rule.onNodeWithTag("searchField").getUnclippedBoundsInRoot()
-        assertTrue("række $row over prikker $dots", row.bottom <= dots.top)
+        assertTrue("prikker $dots over række $row", dots.bottom <= row.top)
+        assertTrue("række $row over dock $dock", row.bottom <= dock.top)
         assertTrue("dock $dock over søgefelt $search", dock.bottom <= search.top)
         listOf("shortcuts", "dock", "searchField").forEach {
             assertEquals("$it klippes", rule.onNodeWithTag(it).getUnclippedBoundsInRoot(), rule.onNodeWithTag(it).getBoundsInRoot())
