@@ -14,6 +14,7 @@ import androidx.compose.ui.layout.LayoutInfo
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeUp
 import app.darkio.ui.theme.DarkIOSize
 import org.junit.Assert.assertTrue
 import androidx.compose.ui.test.swipe
@@ -64,7 +65,7 @@ class PageShortcutsUiTest {
     }
 
     private fun addFromDrawer(name: String) {
-        rule.onNodeWithText(context.getString(R.string.home_all_apps)).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithText(name).performTouchInput { longClick() }
         rule.onNodeWithText(context.getString(R.string.menu_shortcut)).performClick()
         rule.onNodeWithTag("appMenu").assertDoesNotExist()
@@ -139,7 +140,7 @@ class PageShortcutsUiTest {
         val four = listOf("Alfa", "Bravo", "Charlie", "Delta")
         favs = four.withIndex().associate { id(it.value) to it.index }
         show(four.withIndex().associate { id(it.value) to it.index }.let { mapOf(0 to it) }, hintSeen = false)
-        rule.onNodeWithText(context.getString(R.string.home_all_apps)).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithText("Echo").performTouchInput { longClick() }
         rule.onNodeWithText(context.getString(R.string.menu_favorite)).performClick()
         rule.onNodeWithText("Echo").performTouchInput { longClick() }

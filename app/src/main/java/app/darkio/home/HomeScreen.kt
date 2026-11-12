@@ -259,17 +259,6 @@ fun HomeScreen(
                         BasicText(stringResource(R.string.hint_swipe_up), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft))
                         Spacer(Modifier.height(DarkIOSpace.S3))
                     }
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(DarkIOSize.FieldHeight)
-                            .clip(DarkIOShapes.Md)
-                            .background(DarkIOColors.Surface)
-                            .clickable(role = Role.Button, onClick = openDrawer),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        BasicText(stringResource(R.string.home_all_apps), style = DarkIOType.Button.copy(color = DarkIOColors.Ink))
-                    }
                 } else {
                     SearchResultsPane(results, onLaunch, { menuAppId = it.id }, Modifier.weight(1f, fill = false))
                 }
@@ -279,6 +268,7 @@ fun HomeScreen(
                     onQueryChange = { query = it },
                     onSearch = { results.firstOrNull()?.let(onLaunch) },
                     background = DarkIOColors.SurfaceGlass,
+                    placeholder = stringResource(R.string.home_search_placeholder),
                 )
             }
         }

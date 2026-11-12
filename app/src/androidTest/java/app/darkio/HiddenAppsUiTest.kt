@@ -8,9 +8,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.data.AppEntry
 import app.darkio.data.splitApps
@@ -23,7 +25,6 @@ class HiddenAppsUiTest {
     val rule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
-    private val allApps = context.getString(R.string.home_all_apps)
     private val hiddenTitle = context.getString(R.string.hidden_apps_title)
     private val note = context.getString(R.string.hidden_apps_note)
     private val showAgain = context.getString(R.string.hidden_apps_show_again)
@@ -46,14 +47,14 @@ class HiddenAppsUiTest {
     }
 
     private fun openHiddenScreen() {
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithText(hiddenTitle).performClick()
     }
 
     @Test
     fun hiddenAppIsNotInDrawer() {
         show(hiddenAtStart = setOf("b/B#0"))
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithText("Alfa").assertIsDisplayed()
         rule.onNodeWithText("Bravo").assertDoesNotExist()
     }
@@ -61,7 +62,7 @@ class HiddenAppsUiTest {
     @Test
     fun hideInLongPressMenuHidesApp() {
         show()
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithText("Bravo").performTouchInput { longClick() }
         rule.onNodeWithText(context.getString(R.string.menu_hide)).performClick()
         rule.onNodeWithText("Bravo").assertDoesNotExist()
@@ -82,7 +83,7 @@ class HiddenAppsUiTest {
         show()
         openHiddenScreen()
         rule.onNodeWithText("Alfa").assertDoesNotExist()
-        rule.onNodeWithText(allApps).assertDoesNotExist()
+        rule.onNodeWithTag("searchField").assertDoesNotExist()
     }
 
     @Test

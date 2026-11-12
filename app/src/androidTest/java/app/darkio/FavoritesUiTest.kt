@@ -31,7 +31,6 @@ class FavoritesUiTest {
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val installed = listOf("Alfa", "Bravo", "Charlie", "Delta", "Echo").map { AppEntry("${it.lowercase()}/A#0", it) }
-    private val allApps = context.getString(R.string.home_all_apps)
     private val favorite = context.getString(R.string.menu_favorite)
     private val unfavorite = context.getString(R.string.menu_unfavorite)
     private var slots by mutableStateOf(emptyMap<String, Int>())
@@ -59,7 +58,7 @@ class FavoritesUiTest {
     private fun id(name: String) = installed.first { it.label == name }.id
 
     private fun toggleFromDrawer(name: String, label: String) {
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithText(name).performTouchInput { longClick() }
         rule.onNodeWithText(label).performClick()
         rule.onNodeWithTag("appMenu").assertDoesNotExist()

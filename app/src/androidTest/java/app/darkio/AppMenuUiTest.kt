@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -42,7 +43,6 @@ class AppMenuUiTest {
     val rule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
-    private val allApps = context.getString(R.string.home_all_apps)
     private val installed = listOf(AppEntry("a/A#0", "Alfa"), AppEntry("b/B#0", "Bravo"))
     private val hide = context.getString(R.string.menu_hide)
     private val move = context.getString(R.string.menu_move_category)
@@ -77,7 +77,7 @@ class AppMenuUiTest {
     }
 
     private fun openMenuFromDrawer() {
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithText("Bravo").performTouchInput { longClick() }
     }
 
@@ -182,7 +182,7 @@ class AppMenuUiTest {
     @Test
     fun savedCustomCategoryIsUsedFromStartAndInvalidOneFallsBack() {
         show(customAtStart = mapOf("a/A#0" to "arbejde", "b/B#0" to "ugyldig"))
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithContentDescription(work).performClick()
         rule.onNodeWithText("Alfa").assertIsDisplayed()
         rule.onNodeWithText("Bravo").assertDoesNotExist()
