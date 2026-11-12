@@ -60,6 +60,7 @@
     <string name="calendar_tomorrow">i morgen %1$s</string>
     <string name="calendar_untitled">(uden titel)</string>
     <string name="tip_copied">kopieret til udklipsholder</string>
+    <string name="tip_copy">kopiér dagens tip</string>
     <string name="workout_rest_day">hviledag</string>
     <string name="workout_mark_completed">markér som gennemført</string>
     <string name="workout_completed">gennemført</string>

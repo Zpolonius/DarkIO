@@ -53,6 +53,7 @@ import app.darkio.dashboard.FocusCard
 import app.darkio.dashboard.StepsCard
 import app.darkio.dashboard.TipCard
 import app.darkio.dashboard.WorkoutCard
+import app.darkio.dashboard.BuildPage
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
@@ -181,6 +182,8 @@ fun HomeScreen(
                             Spacer(Modifier.height(DarkIOSpace.S3))
                             CaloriesCard()
                         }
+                    } else if (p == 2) {
+                        BuildPage()
                     }
                     BasicText(pageLabels[p], style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("page$p"))
                     if (query.isBlank()) {
