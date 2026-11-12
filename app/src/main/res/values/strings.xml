@@ -43,6 +43,7 @@
     <string name="focus_title">fokus</string>
     <string name="focus_grant_access_title">Giv adgang til brugsdata</string>
     <string name="focus_grant_access_explanation">Viser skærmtid og antal oplåsninger. Brugsdata bliver på telefonen.</string>
+    <string name="focus_digital_wellbeing">Digital Wellbeing ↗</string>
     <string name="steps_title">skridt</string>
     <string name="steps_grant_access_title">Giv adgang til skridt</string>
     <string name="steps_grant_access_explanation">Viser dagens skridt fra Health Connect. Sundhedsdata bliver på telefonen.</string>
