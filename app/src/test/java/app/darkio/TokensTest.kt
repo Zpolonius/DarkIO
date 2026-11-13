@@ -19,7 +19,7 @@ class TokensTest {
         "scrim-top" to DarkIOColors.ScrimTop, "scrim-bottom" to DarkIOColors.ScrimBottom, "scrim-sheet" to DarkIOColors.ScrimSheet,
         "line" to DarkIOColors.Line, "line-strong" to DarkIOColors.LineStrong,
         "ink" to DarkIOColors.Ink, "ink-soft" to DarkIOColors.InkSoft, "ink-muted" to DarkIOColors.InkMuted,
-        "accent" to DarkIOColors.Accent, "pastel-coral" to DarkIOColors.Coral, "pastel-lilac" to DarkIOColors.Lilac,
+        "accent" to DarkIOColors.AccentLime, "pastel-coral" to DarkIOColors.Coral, "pastel-lilac" to DarkIOColors.Lilac,
         "pastel-sun" to DarkIOColors.Sun, "pastel-mint" to DarkIOColors.Mint, "pastel-sky" to DarkIOColors.Sky,
         "positive" to DarkIOColors.Positive, "danger" to DarkIOColors.Danger,
     )

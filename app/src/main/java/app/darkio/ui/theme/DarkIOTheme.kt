@@ -1,6 +1,9 @@
 package app.darkio.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -25,7 +28,9 @@ object DarkIOColors {
     val Ink = Color(0xFFEDEDF2)
     val InkSoft = Color(0xFFC4C4CF)
     val InkMuted = Color(0xFFA0A0AE)
-    val Accent = Color(0xFFC8F25A)
+    val AccentLime = Color(0xFFC8F25A)
+    /** Brugerens valgte accent (F13); snapshot-tilstand, så alle læsere tegnes om med det samme. */
+    var Accent by mutableStateOf(AccentLime)
     val Coral = Color(0xFFFF8A5B)
     val Lilac = Color(0xFFC7B8FF)
     val Sun = Color(0xFFFFD66B)
@@ -79,6 +84,10 @@ object DarkIOSize {
     val PageDotHitHeight = 24.dp
     val CursorWidth = 7.dp
     val CursorHeight = 15.dp
+    val ToggleTrackWidth = 52.dp
+    val ToggleTrackHeight = 32.dp
+    val ToggleKnob = 20.dp
+    val SwatchRing = 2.dp
 }
 
 private val Display = FontFamily(

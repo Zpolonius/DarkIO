@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -37,7 +38,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -57,6 +60,8 @@ import app.darkio.dashboard.BuildPage
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
+import app.darkio.data.HomeCard
+import app.darkio.data.Settings
 import app.darkio.data.dockSlots
 import app.darkio.data.firstFreeSlot
 import app.darkio.data.reorderedSlots
@@ -68,6 +73,7 @@ import app.darkio.drawer.SearchField
 import app.darkio.drawer.SearchResultsPane
 import app.darkio.drawer.searchApps
 import app.darkio.settings.HiddenAppsScreen
+import app.darkio.settings.SettingsScreen
 import app.darkio.ui.TypewriterText
 import app.darkio.ui.onVerticalSwipe
 import app.darkio.ui.theme.DarkIOColors
@@ -92,12 +98,14 @@ fun HomeScreen(
     homeSignal: Int = 0,
     onSetShortcuts: (page: Int, changes: List<Pair<AppEntry, Int?>>) -> Unit = { _, _ -> },
     onOpenNotifications: () -> Unit = {},
+    settings: Settings = Settings(),
+    onSettingsChange: ((Settings) -> Settings) -> Unit = {},
+    requestAccess: ((HomeCard) -> Unit)? = null,
 ) {
     val pageLabels = listOf(R.string.page_today, R.string.page_training, R.string.page_build).map { stringResource(it) }
     val pager = rememberPagerState { pageLabels.size }
     val scope = rememberCoroutineScope()
     // Hjem-knappen (ny MAIN/HOME-intent) vender altid tilbage til side 1.
-    LaunchedEffect(homeSignal) { if (homeSignal > 0) pager.scrollToPage(0) }
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     val results = remember(query, apps.visible) { searchApps(apps.visible, query) }
@@ -106,6 +114,14 @@ fun HomeScreen(
         drawerOpen = true
     }
     var hiddenOpen by rememberSaveable { mutableStateOf(false) }
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(homeSignal) {
+        if (homeSignal > 0) {
+            settingsOpen = false
+            hiddenOpen = false
+            pager.scrollToPage(0)
+        }
+    }
     var menuAppId by rememberSaveable { mutableStateOf<String?>(null) }
     val dock = remember(apps.visible, apps.favoriteSlots) { dockSlots(apps.visible, apps.favoriteSlots) }
     var dockFull by remember { mutableStateOf(false) }
@@ -125,6 +141,7 @@ fun HomeScreen(
     BackHandler(enabled = drawerOpen || query.isNotEmpty()) {
         if (drawerOpen) drawerOpen = false else query = ""
     }
+    BackHandler(enabled = settingsOpen) { settingsOpen = false }
     BackHandler(enabled = hiddenOpen) { hiddenOpen = false }
     BackHandler(enabled = menuApp != null) { menuAppId = null }
     // Skuffen og hjem komponeres ikke bag skærmen, så tryk og TalkBack ikke når dem.
@@ -132,6 +149,11 @@ fun HomeScreen(
         HiddenAppsScreen(apps.hidden, onShowAgain = { onSetHidden(it, false) })
         return
     }
+    if (settingsOpen) {
+        SettingsScreen(settings, onSettingsChange, onOpenHidden = { hiddenOpen = true }, requestAccess = requestAccess)
+        return
+    }
+    val canOpenSettings = !drawerOpen && query.isEmpty() && menuApp == null
     val swipePx = with(LocalDensity.current) { DarkIOSize.TouchMin.toPx() }
     val motion = tween<IntOffset>(DarkIOMotion.DrawerMs)
     val fade = tween<Float>(DarkIOMotion.DrawerMs)
@@ -155,6 +177,8 @@ fun HomeScreen(
                 val slots = apps.shortcutSlots[p].orEmpty()
                 val shown = remember(apps.visible, slots) { dockSlots(apps.visible, slots) }
                 Box(Modifier.fillMaxSize()) {
+                    // Bag kort og genveje: langt tryk på tom flade åbner Indstillinger (F11).
+                    Box(Modifier.fillMaxSize().pointerInput(canOpenSettings) { detectTapGestures(onLongPress = { if (canOpenSettings) settingsOpen = true }) })
                     Box(Modifier.fillMaxSize().padding(bottom = pageBottomPadding), contentAlignment = Alignment.Center) {
                         if (p == 0) {
                             Column(
@@ -163,14 +187,12 @@ fun HomeScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = DarkIOSpace.S5)
                                     .padding(top = DarkIOSpace.TopInset),
+                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
                             ) {
-                                ClockCard()
-                                Spacer(Modifier.height(DarkIOSpace.S2))
-                                CalendarCard()
-                                Spacer(Modifier.height(DarkIOSpace.S2))
-                                FocusCard()
-                                Spacer(Modifier.height(DarkIOSpace.S2))
-                                TipCard()
+                                if (HomeCard.Clock in settings.cards) ClockCard(Modifier.testTag("card_Clock"))
+                                if (HomeCard.Calendar in settings.cards) CalendarCard(Modifier.testTag("card_Calendar"))
+                                if (HomeCard.Focus in settings.cards) FocusCard()
+                                if (HomeCard.Tip in settings.cards) TipCard(Modifier.testTag("card_Tip"))
                             }
                         } else if (p == 1) {
                             Column(
@@ -179,12 +201,11 @@ fun HomeScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = DarkIOSpace.S5)
                                     .padding(top = DarkIOSpace.TopInset),
+                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S3),
                             ) {
-                                WorkoutCard()
-                                Spacer(Modifier.height(DarkIOSpace.S3))
-                                StepsCard()
-                                Spacer(Modifier.height(DarkIOSpace.S3))
-                                CaloriesCard()
+                                if (HomeCard.Workout in settings.cards) WorkoutCard(Modifier.testTag("card_Workout"))
+                                if (HomeCard.Steps in settings.cards) StepsCard(Modifier.testTag("card_Steps"), goal = settings.stepGoal)
+                                if (HomeCard.Calories in settings.cards) CaloriesCard(Modifier.testTag("card_Calories"))
                             }
                         } else if (p == 2) {
                             BuildPage()
