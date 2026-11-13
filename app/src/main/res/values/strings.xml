@@ -29,6 +29,7 @@
     <string name="menu_app_info">Appinfo</string>
     <string name="menu_uninstall">Afinstallér</string>
     <string name="search_placeholder">søg apps</string>
+    <string name="home_search_placeholder">søg apps // swipe op for alle apps</string>
     <string name="search_no_results">// ingen apps fundet_</string>
     <string name="category_all">Alle</string>
     <string name="category_social">Social</string>

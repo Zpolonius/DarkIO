@@ -29,7 +29,6 @@ class DrawerUiTest {
     val rule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
-    private val allApps = context.getString(R.string.home_all_apps)
     private val hint = context.getString(R.string.hint_swipe_up)
     private val apps = (1..200).map { AppEntry("id$it", "App %03d".format(it)) }
 
@@ -48,9 +47,9 @@ class DrawerUiTest {
     }
 
     @Test
-    fun drawerOpensFromButtonScrollsAndKeepsClickablesBelowMiddle() {
+    fun drawerOpensFromSwipeUpScrollsAndKeepsClickablesBelowMiddle() {
         show()
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithTag("drawerGrid").assertIsDisplayed()
         rule.onNodeWithText("App 001").assertIsDisplayed()
         assertClickablesBelowMiddle()
@@ -87,7 +86,7 @@ class DrawerUiTest {
     @Test
     fun categoryButtonsAreAtLeast48DpAndHaveTalkBackLabels() {
         show()
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         val minPx = with(rule.density) { 48.dp.toPx() } - 0.5f
         listOf(R.string.category_all, R.string.category_social, R.string.category_game, R.string.category_photo, R.string.category_work, R.string.category_tool, R.string.category_other)
             .map { context.getString(it) }.forEach { label ->
@@ -108,7 +107,7 @@ class DrawerUiTest {
             AppEntry("o1", "MiscTool", category = AppCategory.OTHER),
         )
         rule.setContent { HomeScreen(apps = AppLists(testApps, emptyList()), hintSeen = true, onHintSeen = {}, onLaunch = {}, onSetHidden = { _, _ -> }, onSetFavorites = {}, onSetCategory = { _, _ -> }, onAppInfo = {}, onUninstall = {}) }
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
 
         val steps = listOf(
             Triple(R.string.category_all, "~/apps/alle · 6 stk", testApps.map { it.label }),

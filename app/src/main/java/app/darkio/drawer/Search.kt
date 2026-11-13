@@ -84,6 +84,7 @@ fun SearchField(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
     background: Color = DarkIOColors.Surface,
+    placeholder: String = stringResource(R.string.search_placeholder),
 ) {
     var isFocused by remember { mutableStateOf(false) }
     Row(
@@ -95,7 +96,7 @@ fun SearchField(
         BasicText(">", style = DarkIOType.Input.copy(color = if (isFocused) DarkIOColors.Accent else DarkIOColors.InkMuted))
         Spacer(Modifier.width(DarkIOSpace.S2))
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-            if (query.isEmpty()) BasicText(stringResource(R.string.search_placeholder), style = DarkIOType.Input.copy(color = DarkIOColors.InkMuted))
+            if (query.isEmpty()) BasicText(placeholder, style = DarkIOType.Input.copy(color = DarkIOColors.InkMuted), maxLines = 1, overflow = TextOverflow.Ellipsis)
             BasicTextField(
                 value = query, onValueChange = onQueryChange,
                 modifier = Modifier.fillMaxWidth().testTag("searchField").onFocusChanged { isFocused = it.isFocused },

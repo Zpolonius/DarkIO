@@ -11,6 +11,8 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
@@ -25,8 +27,8 @@ class SearchUiTest {
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val placeholder = context.getString(R.string.search_placeholder)
+    private val homePlaceholder = context.getString(R.string.home_search_placeholder)
     private val noResults = context.getString(R.string.search_no_results)
-    private val allApps = context.getString(R.string.home_all_apps)
     private val apps = (1..20).map { AppEntry("id$it", "App %03d".format(it)) }
     private var launched: AppEntry? = null
 
@@ -45,7 +47,7 @@ class SearchUiTest {
     fun searchFieldIsDisplayedWithPromptAndPlaceholder() {
         show()
         rule.onNodeWithText(">").assertIsDisplayed()
-        rule.onNodeWithText(placeholder).assertIsDisplayed()
+        rule.onNodeWithText(homePlaceholder).assertIsDisplayed()
         assertClickablesBelowMiddle()
     }
 
@@ -81,7 +83,7 @@ class SearchUiTest {
     @Test
     fun searchWorksInDrawer() {
         show()
-        rule.onNodeWithText(allApps).performClick()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithTag("drawerGrid").assertIsDisplayed()
         val drawerSearch = rule.onAllNodesWithTag("searchField")
         drawerSearch[drawerSearch.fetchSemanticsNodes().size - 1].performTextInput("015")
