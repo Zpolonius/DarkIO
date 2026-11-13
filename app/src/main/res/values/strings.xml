@@ -95,7 +95,23 @@
     <string name="workout_rest_day">hviledag</string>
     <string name="workout_mark_completed">markér som gennemført</string>
     <string name="workout_completed">gennemført</string>
+    <string name="workout_title_rpe">%1$s · RPE %2$d</string>
+    <string name="workout_program_rpe">RPE</string>
+    <string name="workout_program_add">+ tilføj pas</string>
+    <string name="workout_program_delete">slet pas</string>
+    <string name="workout_program_rpe_down">Sænk RPE</string>
+    <string name="workout_program_rpe_up">Hæv RPE</string>
     <string name="workout_streak">%1$d pas i træk</string>
+
+    <string-array name="workout_day_names">
+        <item>mandag</item>
+        <item>tirsdag</item>
+        <item>onsdag</item>
+        <item>torsdag</item>
+        <item>fredag</item>
+        <item>lørdag</item>
+        <item>søndag</item>
+    </string-array>
 
     <string-array name="workout_week_days">
         <item>man</item>

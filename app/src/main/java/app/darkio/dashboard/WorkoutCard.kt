@@ -77,7 +77,7 @@ fun WorkoutCard(
             if (data.todayWorkout != null) {
                 val isCompleted = today in data.completedDates || data.todayWorkout.completedDate == today.toString()
                 BasicText(
-                    data.todayWorkout.title,
+                    stringResource(R.string.workout_title_rpe, data.todayWorkout.title, data.todayWorkout.rpe),
                     style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
                     modifier = Modifier.padding(bottom = DarkIOSpace.S1),
                 )
