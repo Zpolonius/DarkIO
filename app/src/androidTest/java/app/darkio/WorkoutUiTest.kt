@@ -25,6 +25,7 @@ import org.junit.Rule
 import org.junit.Test
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 import app.darkio.data.WorkoutRecord
 
@@ -202,6 +203,10 @@ class WorkoutUiTest {
             mutableMapOf(2 to WorkoutDay(2, "tirsdag: spinning", "spinning", completedDate = tuesday.toString(), rpe = 8)),
         )
         val close = showEditor(fakeDao)
+        // Sletteknappens trykflade må ikke starte, hvor RPE-plus slutter (fejltryk sletter med det samme).
+        val plusEnd = rule.onNodeWithTag("programRpeUp_2").fetchSemanticsNode().boundsInRoot.right
+        val deleteStart = rule.onNodeWithTag("programDelete_2").fetchSemanticsNode().boundsInRoot.left
+        assertTrue(deleteStart > plusEnd)
         rule.onNodeWithTag("programDelete_2").performClick()
         rule.onNodeWithTag("programExercises_2").assertDoesNotExist()
         rule.runOnIdle(close)

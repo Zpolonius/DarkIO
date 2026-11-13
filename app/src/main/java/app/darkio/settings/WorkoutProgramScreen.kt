@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -32,7 +33,6 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import app.darkio.R
@@ -90,7 +90,6 @@ fun WorkoutProgramScreen(
             key(w.dayOfWeek) {
                 val d = w.dayOfWeek
                 var text by remember { mutableStateOf(w.exercises) }
-                val rpe = w.rpe
                 Column(
                     Modifier.fillMaxWidth().clip(DarkIOShapes.Lg).background(DarkIOColors.Surface).padding(DarkIOSpace.S3),
                     verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S3),
@@ -131,25 +130,25 @@ fun WorkoutProgramScreen(
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         BasicText(stringResource(R.string.workout_program_rpe), style = DarkIOType.Item.copy(color = DarkIOColors.Ink))
                         StepButton(R.string.settings_step_minus, R.string.workout_program_rpe_down, "programRpeDown_$d") {
-                            if (rpe > 1) save(d, w.copy(rpe = rpe - 1))
+                            if (w.rpe > 1) save(d, w.copy(rpe = w.rpe - 1))
                         }
                         BasicText(
-                            rpe.toString(),
+                            w.rpe.toString(),
                             Modifier.padding(horizontal = DarkIOSpace.S3).testTag("programRpe_$d"),
                             style = DarkIOType.Data.copy(color = DarkIOColors.Ink),
                         )
                         StepButton(R.string.settings_step_plus, R.string.workout_program_rpe_up, "programRpeUp_$d") {
-                            if (rpe < 10) save(d, w.copy(rpe = rpe + 1))
+                            if (w.rpe < 10) save(d, w.copy(rpe = w.rpe + 1))
                         }
+                        Spacer(Modifier.weight(1f))
                         BasicText(
                             stringResource(R.string.workout_program_delete),
                             Modifier
-                                .weight(1f)
                                 .heightIn(min = DarkIOSize.TouchTarget)
                                 .clickable(role = Role.Button) { delete(d) }
-                                .padding(vertical = DarkIOSpace.S3)
+                                .padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S3)
                                 .testTag("programDelete_$d"),
-                            style = DarkIOType.Button.copy(color = DarkIOColors.Accent, textAlign = TextAlign.End),
+                            style = DarkIOType.Button.copy(color = DarkIOColors.Accent),
                         )
                     }
                 }

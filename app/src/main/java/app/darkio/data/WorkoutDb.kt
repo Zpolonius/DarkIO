@@ -50,8 +50,8 @@ abstract class WorkoutDao {
     abstract suspend fun deleteDay(dayOfWeek: Int)
 
     /**
-     * Gemmer [workout]; [oldDay] er dagen passet havde før (null for et nyt pas). Flyttes passet væk fra i dag,
-     *. Et pas flyttet til i dag starter uden "gennemført" (i dag var fri, så der er ingen post at slette). Historik for tidligere datoer røres ikke.
+     * Gemmer [workout]; [oldDay] er dagen passet havde før (null for et nyt pas). Flyttes passet væk fra i dag, slettes
+     * dagens "gennemført" via [deleteWorkout]; et flyttet pas starter ikke gennemført. Historik for tidligere datoer røres ikke.
      */
     @Transaction
     open suspend fun saveWorkout(oldDay: Int?, workout: WorkoutDay, today: String, todayDow: Int) {
