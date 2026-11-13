@@ -74,6 +74,7 @@ import app.darkio.drawer.SearchResultsPane
 import app.darkio.drawer.searchApps
 import app.darkio.settings.HiddenAppsScreen
 import app.darkio.settings.SettingsScreen
+import app.darkio.settings.WorkoutProgramScreen
 import app.darkio.ui.TypewriterText
 import app.darkio.ui.onVerticalSwipe
 import app.darkio.ui.theme.DarkIOColors
@@ -114,11 +115,13 @@ fun HomeScreen(
         drawerOpen = true
     }
     var hiddenOpen by rememberSaveable { mutableStateOf(false) }
+    var workoutOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(homeSignal) {
         if (homeSignal > 0) {
             settingsOpen = false
             hiddenOpen = false
+            workoutOpen = false
             pager.scrollToPage(0)
         }
     }
@@ -143,14 +146,19 @@ fun HomeScreen(
     }
     BackHandler(enabled = settingsOpen) { settingsOpen = false }
     BackHandler(enabled = hiddenOpen) { hiddenOpen = false }
+    BackHandler(enabled = workoutOpen) { workoutOpen = false }
     BackHandler(enabled = menuApp != null) { menuAppId = null }
     // Skuffen og hjem komponeres ikke bag skærmen, så tryk og TalkBack ikke når dem.
     if (hiddenOpen) {
         HiddenAppsScreen(apps.hidden, onShowAgain = { onSetHidden(it, false) })
         return
     }
+    if (workoutOpen) {
+        WorkoutProgramScreen()
+        return
+    }
     if (settingsOpen) {
-        SettingsScreen(settings, onSettingsChange, onOpenHidden = { hiddenOpen = true }, requestAccess = requestAccess)
+        SettingsScreen(settings, onSettingsChange, onOpenHidden = { hiddenOpen = true }, onOpenWorkout = { workoutOpen = true }, requestAccess = requestAccess)
         return
     }
     val canOpenSettings = !drawerOpen && query.isEmpty() && menuApp == null

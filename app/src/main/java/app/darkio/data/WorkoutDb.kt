@@ -1,5 +1,6 @@
 package app.darkio.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -15,7 +16,8 @@ data class WorkoutDay(
     @PrimaryKey val dayOfWeek: Int, // 1..7
     val title: String,
     val exercises: String,
-    val completedDate: String? = null
+    val completedDate: String? = null,
+    @ColumnInfo(defaultValue = "7") val rpe: Int = 7,
 )
 
 /** Historik over gennemførte pas. */
@@ -44,6 +46,27 @@ abstract class WorkoutDao {
     @Query("DELETE FROM workout_record WHERE date = :date")
     abstract suspend fun deleteCompleted(date: String)
 
+    @Query("DELETE FROM workout_day WHERE dayOfWeek = :dayOfWeek")
+    abstract suspend fun deleteDay(dayOfWeek: Int)
+
+    /**
+     * Gemmer [workout]; [oldDay] er dagen passet havde før (null for et nyt pas). Flyttes passet væk fra i dag,
+     *. Et pas flyttet til i dag starter uden "gennemført" (i dag var fri, så der er ingen post at slette). Historik for tidligere datoer røres ikke.
+     */
+    @Transaction
+    open suspend fun saveWorkout(oldDay: Int?, workout: WorkoutDay, today: String, todayDow: Int) {
+        val moved = oldDay != workout.dayOfWeek
+        val kept = if (moved) null else getWorkoutForDay(workout.dayOfWeek)?.completedDate
+        if (oldDay != null && moved) deleteWorkout(oldDay, today, todayDow)
+        upsert(workout.copy(completedDate = kept))
+    }
+
+    @Transaction
+    open suspend fun deleteWorkout(dayOfWeek: Int, today: String, todayDow: Int) {
+        deleteDay(dayOfWeek)
+        if (dayOfWeek == todayDow) deleteCompleted(today)
+    }
+
     @Transaction
     open suspend fun setCompleted(dayOfWeek: Int, completed: Boolean, dateStr: String) {
         val existing = getWorkoutForDay(dayOfWeek)
@@ -71,6 +94,17 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `workout_record` (`date` TEXT NOT NULL, PRIMARY KEY(`date`))")
         db.execSQL("INSERT OR IGNORE INTO `workout_record` (`date`) SELECT `completedDate` FROM `workout_day` WHERE `completedDate` IS NOT NULL")
+    }
+}
+
+/**
+ * Version 5 tilføjer rpe (standard 7). Alle rækker og al historik bevares. Uændrede seed-pas mister kun det overflødige ", RPE"
+ * i teksten (RPE vises nu som tal); andre øvelsestekster røres ikke.
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `workout_day` ADD COLUMN `rpe` INTEGER NOT NULL DEFAULT 7")
+        db.execSQL("UPDATE `workout_day` SET `title` = substr(`title`, 1, instr(`title`, ':')) || ' spinning, romaskine, styrke', `exercises` = 'spinning, romaskine, styrke' WHERE `exercises` = 'spinning, romaskine, styrke, RPE'")
     }
 }
 

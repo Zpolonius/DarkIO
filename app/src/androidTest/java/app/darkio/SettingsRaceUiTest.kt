@@ -37,7 +37,7 @@ class SettingsRaceUiTest {
     private fun show() = rule.setContent {
         val s by store.settings().collectAsState(Settings())
         val scope = rememberCoroutineScope()
-        SettingsScreen(s, { change -> scope.launch(Dispatchers.IO) { store.updateSettings(change) } }, {}, requestAccess = {})
+        SettingsScreen(s, { change -> scope.launch(Dispatchers.IO) { store.updateSettings(change) } }, {}, {}, requestAccess = {})
     }
 
     @Test

@@ -1,11 +1,14 @@
 package app.darkio
 
+import app.darkio.data.WorkoutDao
 import app.darkio.data.WorkoutDay
+import app.darkio.data.WorkoutRecord
 import app.darkio.data.calculateWorkoutStreak
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import java.time.LocalDate
 
@@ -154,5 +157,62 @@ class WorkoutTest {
         val today = LocalDate.of(2026, 11, 10) // Tirsdag
         val future = LocalDate.of(2026, 11, 12)
         assertEquals(1, calculateWorkoutStreak(trainingDays, setOf(today, future), today))
+    }
+}
+
+/** F4: redigering af programmet og "gennemført i dag". */
+class WorkoutProgramTest {
+    private class FakeDao(vararg days: WorkoutDay, records: Set<String> = emptySet()) : WorkoutDao() {
+        val data = days.associateBy { it.dayOfWeek }.toMutableMap()
+        val completed = records.toMutableSet()
+        override suspend fun getWorkoutForDay(dayOfWeek: Int) = data[dayOfWeek]
+        override suspend fun getAllWorkouts() = data.values.sortedBy { it.dayOfWeek }
+        override suspend fun getCompletedDates() = completed.sorted()
+        override suspend fun upsert(workout: WorkoutDay) { data[workout.dayOfWeek] = workout }
+        override suspend fun insertCompleted(record: WorkoutRecord) { completed.add(record.date) }
+        override suspend fun deleteCompleted(date: String) { completed.remove(date) }
+        override suspend fun deleteDay(dayOfWeek: Int) { data.remove(dayOfWeek) }
+    }
+
+    private val today = "2026-11-17" // tirsdag
+    private val past = "2026-11-12"
+    private fun tuesday(done: Boolean = true) = WorkoutDay(2, "tirsdag: a", "a", if (done) today else null, 7)
+
+    private fun dao(done: Boolean = true) =
+        FakeDao(tuesday(done), WorkoutDay(4, "torsdag: a", "a"), records = if (done) setOf(past, today) else setOf(past))
+
+    @Test
+    fun movingTodaysWorkoutAwayDropsTodaysCompletionButKeepsHistory() = runBlocking {
+        val dao = dao()
+        dao.saveWorkout(2, tuesday().copy(dayOfWeek = 3), today, 2)
+        assertNull(dao.data[2])
+        assertNull(dao.data[3]?.completedDate)
+        assertEquals(listOf(past), dao.getCompletedDates())
+    }
+
+    @Test
+    fun deletingTodaysWorkoutDropsTodaysCompletionButKeepsHistory() = runBlocking {
+        val dao = dao()
+        dao.deleteWorkout(2, today, 2)
+        assertNull(dao.data[2])
+        assertEquals(listOf(past), dao.getCompletedDates())
+    }
+
+    @Test
+    fun deletingOtherDayKeepsTodaysCompletion() = runBlocking {
+        val dao = dao()
+        dao.deleteWorkout(4, today, 2)
+        assertEquals(listOf(past, today), dao.getCompletedDates())
+        assertEquals(today, dao.data[2]?.completedDate)
+    }
+
+    @Test
+    fun editingExercisesAndRpeOfTodaysWorkoutKeepsCompletion() = runBlocking {
+        val dao = dao()
+        dao.saveWorkout(2, tuesday().copy(exercises = "b", rpe = 9, completedDate = null), today, 2)
+        assertEquals("b", dao.data[2]?.exercises)
+        assertEquals(9, dao.data[2]?.rpe)
+        assertEquals(today, dao.data[2]?.completedDate)
+        assertEquals(listOf(past, today), dao.getCompletedDates())
     }
 }

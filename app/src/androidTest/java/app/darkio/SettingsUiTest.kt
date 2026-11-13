@@ -26,6 +26,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -197,7 +198,7 @@ class SettingsUiTest {
             var goal by rememberSaveable { mutableStateOf(Settings().stepGoal) }
             Column(Modifier.fillMaxSize()) {
                 StepsCard(hasPermission = { true }, loadSteps = { 100L }, goal = goal)
-                SettingsScreen(Settings(stepGoal = goal), { change -> goal = change(Settings(stepGoal = goal)).stepGoal }, {}, Modifier.fillMaxWidth().weight(1f), requestAccess = {})
+                SettingsScreen(Settings(stepGoal = goal), { change -> goal = change(Settings(stepGoal = goal)).stepGoal }, {}, {}, Modifier.fillMaxWidth().weight(1f), requestAccess = {})
             }
         }
         rule.onNodeWithTag("stepsCount").assertTextContains("8.000", substring = true)
@@ -227,7 +228,6 @@ class SettingsUiTest {
     fun hiddenAppsLinkBackAndHomeButtonNavigateAsDesigned() {
         show()
         longPressMargin()
-        rule.onNodeWithTag("link_workout").assertIsNotEnabled()
         rule.onNodeWithTag("link_background").assertIsNotEnabled()
         rule.onNodeWithText(context.getString(R.string.hidden_apps_title)).performClick()
         rule.onNodeWithTag("hiddenApps").assertIsDisplayed()
@@ -241,6 +241,22 @@ class SettingsUiTest {
         rule.onNodeWithText(context.getString(R.string.hidden_apps_title)).performClick()
         rule.runOnIdle { homeSignal++ }
         rule.onNodeWithTag("hiddenApps").assertDoesNotExist()
+        rule.onNodeWithText(title).assertDoesNotExist()
+        rule.onNodeWithTag("homePager").assertIsDisplayed()
+    }
+
+    @Test
+    fun workoutProgramLinkBackAndHomeButtonNavigateAsDesigned() {
+        show()
+        longPressMargin()
+        rule.onNodeWithTag("link_workout").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithTag("workoutProgram").fetchSemanticsNodes().isNotEmpty() }
+        back()
+        rule.onNodeWithText(title).assertIsDisplayed()
+        rule.onNodeWithTag("link_workout").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithTag("workoutProgram").fetchSemanticsNodes().isNotEmpty() }
+        rule.runOnIdle { homeSignal++ }
+        rule.onNodeWithTag("workoutProgram").assertDoesNotExist()
         rule.onNodeWithText(title).assertDoesNotExist()
         rule.onNodeWithTag("homePager").assertIsDisplayed()
     }
