@@ -177,7 +177,7 @@ fun StepsCard(
         },
         modifier = modifier,
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
-        reloadTrigger = permissionAttempt,
+        reloadTrigger = permissionAttempt to goal,
         onGrantAccess = actualOnGrantAccess,
         needsAccessTitle = stringResource(R.string.steps_grant_access_title),
         needsAccessExplanation = stringResource(R.string.steps_grant_access_explanation),
