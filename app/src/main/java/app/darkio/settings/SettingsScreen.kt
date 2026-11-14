@@ -79,6 +79,7 @@ fun SettingsScreen(
     settings: Settings,
     onChange: ((Settings) -> Settings) -> Unit,
     onOpenHidden: () -> Unit,
+    onOpenWorkout: () -> Unit,
     modifier: Modifier = Modifier,
     onResetAll: () -> Unit = {},
     requestAccess: ((HomeCard) -> Unit)? = null,
@@ -140,7 +141,7 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(DarkIOSpace.S5))
         Group {
-            LinkRow(R.string.settings_workout_program, DarkIOColors.InkMuted, Modifier.testTag("link_workout").semantics { disabled() })
+            LinkRow(R.string.settings_workout_program, DarkIOColors.Ink, Modifier.testTag("link_workout").clickable(role = Role.Button, onClick = onOpenWorkout))
             Row(
                 Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
                 verticalAlignment = Alignment.CenterVertically,
@@ -201,7 +202,7 @@ private fun LinkRow(res: Int, color: Color, modifier: Modifier) {
 }
 
 @Composable
-private fun StepButton(glyph: Int, description: Int, tag: String, onClick: () -> Unit) {
+internal fun StepButton(glyph: Int, description: Int, tag: String, onClick: () -> Unit) {
     val label = stringResource(description)
     Box(
         Modifier

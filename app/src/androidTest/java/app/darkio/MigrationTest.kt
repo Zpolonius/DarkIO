@@ -6,6 +6,7 @@ import app.darkio.data.AppDatabase
 import app.darkio.data.MIGRATION_1_2
 import app.darkio.data.MIGRATION_2_3
 import app.darkio.data.MIGRATION_3_4
+import app.darkio.data.MIGRATION_4_5
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -175,6 +176,33 @@ class MigrationTest {
         db.query("SELECT COUNT(*) FROM workout_record").use {
             it.moveToFirst()
             assertEquals(0, it.getInt(0))
+        }
+    }
+
+    @Test
+    fun migrate4To5AddsRpeCleansUntouchedSeedTextAndKeepsDatesAndRecords() {
+        helper.createDatabase("migration-test-4-5", 4).apply {
+            execSQL("INSERT INTO workout_day VALUES (2, 'tirsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', '2026-11-10')")
+            execSQL("INSERT INTO workout_day VALUES (4, 'torsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+            execSQL("INSERT INTO workout_day VALUES (6, 'lørdag: løb', 'løb, RPE', NULL)")
+            execSQL("INSERT INTO workout_record VALUES ('2026-11-05')")
+            execSQL("INSERT INTO workout_record VALUES ('2026-11-10')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate("migration-test-4-5", 5, true, MIGRATION_4_5)
+        db.query("SELECT dayOfWeek, title, exercises, completedDate, rpe FROM workout_day ORDER BY dayOfWeek").use {
+            val rows = generateSequence { if (it.moveToNext()) listOf(it.getInt(0), it.getString(1), it.getString(2), it.getString(3), it.getInt(4)) else null }.toList()
+            assertEquals(
+                listOf(
+                    listOf(2, "tirsdag: spinning, romaskine, styrke", "spinning, romaskine, styrke", "2026-11-10", 7),
+                    listOf(4, "torsdag: spinning, romaskine, styrke", "spinning, romaskine, styrke", null, 7),
+                    listOf(6, "lørdag: løb", "løb, RPE", null, 7),
+                ),
+                rows,
+            )
+        }
+        db.query("SELECT date FROM workout_record ORDER BY date").use {
+            assertEquals(listOf("2026-11-05", "2026-11-10"), generateSequence { if (it.moveToNext()) it.getString(0) else null }.toList())
         }
     }
 }
