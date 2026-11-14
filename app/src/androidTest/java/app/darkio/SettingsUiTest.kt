@@ -14,7 +14,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -27,6 +26,7 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -72,7 +72,8 @@ class SettingsUiTest {
 
     private fun show(initial: Settings = Settings()) = rule.setContent {
         var s by rememberSaveable { mutableStateOf(Triple(initial.cards, initial.accent, initial.stepGoal)) }
-        current = Settings(s.second, s.first, s.third)
+        var scrim by rememberSaveable { mutableIntStateOf(initial.scrimTop) }
+        current = Settings(s.second, s.first, s.third, scrim)
         HomeScreen(
             apps = splitApps(installed, emptySet()),
             hintSeen = true,
@@ -89,6 +90,7 @@ class SettingsUiTest {
                 val n = change(current)
                 DarkIOColors.Accent = n.accent.color
                 s = Triple(n.cards, n.accent, n.stepGoal)
+                scrim = n.scrimTop
             },
             onResetAll = { resetCalled = true },
             requestAccess = { requested += it },
@@ -229,10 +231,28 @@ class SettingsUiTest {
     }
 
     @Test
+    fun backgroundRowAdjustsTopScrimInStepsOf5WithinTheLimits() {
+        show()
+        longPressMargin()
+        val value = rule.onNodeWithTag("settingsScrimTop")
+        value.assertTextContains("80 %")
+        rule.onNodeWithTag("scrimTopDown").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp).performClick()
+        value.assertTextContains("75 %")
+        assertEquals(75, current.scrimTop)
+        repeat(5) { rule.onNodeWithTag("scrimTopDown").performClick() }
+        value.assertTextContains("60 %")
+        repeat(7) { rule.onNodeWithTag("scrimTopUp").performClick() }
+        value.assertTextContains("90 %")
+        assertEquals(90, current.scrimTop)
+        rule.onNodeWithTag("scrimTopUp").assertHeightIsAtLeast(48.dp)
+        rule.onNodeWithContentDescription(context.getString(R.string.settings_scrim_up)).assertExists()
+        rule.onNodeWithContentDescription(context.getString(R.string.settings_scrim_down)).assertExists()
+    }
+
+    @Test
     fun hiddenAppsLinkBackAndHomeButtonNavigateAsDesigned() {
         show()
         longPressMargin()
-        rule.onNodeWithTag("link_background").assertIsNotEnabled()
         rule.onNodeWithText(context.getString(R.string.hidden_apps_title)).performClick()
         rule.onNodeWithTag("hiddenApps").assertIsDisplayed()
         back()

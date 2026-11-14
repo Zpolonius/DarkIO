@@ -41,6 +41,24 @@ class HomeAndManifestTest {
         )
     }
 
+    @Test
+    fun noWallpaperOrStoragePermissions() {
+        val perms = pm.getPackageInfo("app.darkio", PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong()))
+            .requestedPermissions.orEmpty().toList()
+        listOf("SET_WALLPAPER", "SET_WALLPAPER_HINTS", "READ_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES", "MANAGE_EXTERNAL_STORAGE")
+            .forEach { assertFalse(it, perms.contains("android.permission.$it")) }
+    }
+
+    /** F21: Android tegner brugerens baggrund bag hjemskærmen; DarkIO selv rører den ikke. */
+    @Test
+    fun homeWindowShowsTheSystemWallpaper() {
+        androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                assertTrue((it.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER) != 0)
+            }
+        }
+    }
+
     // exported test/tooling activities that exist only in the debug build
     private val debugOnly = setOf("androidx.compose.ui.tooling.PreviewActivity", "androidx.activity.ComponentActivity")
 
