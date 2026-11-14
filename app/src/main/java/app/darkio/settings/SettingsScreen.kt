@@ -2,34 +2,46 @@ package app.darkio.settings
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -68,11 +80,14 @@ fun SettingsScreen(
     onChange: ((Settings) -> Settings) -> Unit,
     onOpenHidden: () -> Unit,
     modifier: Modifier = Modifier,
+    onResetAll: () -> Unit = {},
     requestAccess: ((HomeCard) -> Unit)? = null,
 ) {
     val request = requestAccess ?: rememberAccessRequester()
+    var confirmingReset by rememberSaveable { mutableStateOf(false) }
+    Box(modifier.fillMaxSize()) {
     Column(
-        modifier
+        Modifier
             .fillMaxSize()
             .background(DarkIOColors.Bg)
             .verticalScroll(rememberScrollState())
@@ -145,7 +160,22 @@ fun SettingsScreen(
             }
             LinkRow(R.string.settings_background, DarkIOColors.InkMuted, Modifier.testTag("link_background").semantics { disabled() })
             LinkRow(R.string.hidden_apps_title, DarkIOColors.Ink, Modifier.clickable(role = Role.Button, onClick = onOpenHidden))
+            LinkRow(
+                R.string.settings_reset_all,
+                DarkIOColors.Danger,
+                Modifier.testTag("link_reset_all").clickable(role = Role.Button) { confirmingReset = true },
+            )
         }
+    }
+    if (confirmingReset) {
+        ResetConfirmationSheet(
+            onConfirm = {
+                confirmingReset = false
+                onResetAll()
+            },
+            onDismiss = { confirmingReset = false },
+        )
+    }
     }
 }
 
@@ -227,5 +257,67 @@ private fun rememberAccessRequester(): (HomeCard) -> Unit {
             HomeCard.Calories -> scope.launch { if (!checkCaloriesPermission(context)) runCatching { health.launch(CALORIES_PERMISSIONS) } }
             else -> Unit
         }
+    }
+}
+
+@Composable
+private fun ResetConfirmationSheet(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    BackHandler(onBack = onDismiss)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(DarkIOColors.ScrimSheet)
+            .pointerInput(Unit) { detectTapGestures { onDismiss() } },
+    ) {
+        Column(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .testTag("resetConfirmationSheet")
+                .clip(DarkIOShapes.Sheet)
+                .background(DarkIOColors.Bg)
+                .pointerInput(Unit) { detectTapGestures { } }
+                .windowInsetsPadding(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom))
+                .padding(DarkIOSpace.S4),
+        ) {
+            BasicText(
+                stringResource(R.string.settings_reset_confirm_title),
+                style = DarkIOType.Label.copy(color = DarkIOColors.InkMuted),
+            )
+            Spacer(Modifier.height(DarkIOSpace.S2))
+            BasicText(
+                stringResource(R.string.settings_reset_confirm_desc),
+                style = DarkIOType.Body.copy(color = DarkIOColors.InkSoft),
+            )
+            Spacer(Modifier.height(DarkIOSpace.S4))
+            SheetActionButton("confirmReset", R.string.settings_reset_confirm_action, DarkIOColors.Danger, onConfirm)
+            Spacer(Modifier.height(DarkIOSpace.S2))
+            SheetActionButton("cancelReset", R.string.settings_reset_cancel, DarkIOColors.Ink, onDismiss)
+        }
+    }
+}
+
+@Composable
+private fun SheetActionButton(
+    tag: String,
+    labelRes: Int,
+    color: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        Modifier
+            .testTag(tag)
+            .fillMaxWidth()
+            .heightIn(min = DarkIOSize.TouchTarget)
+            .clip(DarkIOShapes.Md)
+            .background(DarkIOColors.Surface)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = DarkIOSpace.S4),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicText(stringResource(labelRes), style = DarkIOType.Button.copy(color = color))
     }
 }

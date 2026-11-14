@@ -18,6 +18,7 @@ import app.darkio.data.expandNotificationPanel
 import app.darkio.data.hintSeen
 import app.darkio.data.Settings
 import app.darkio.data.markHintSeen
+import app.darkio.data.resetPreferences
 import app.darkio.data.updateSettings
 import app.darkio.data.settings as settingsFlow
 import app.darkio.ui.theme.DarkIOColors
@@ -59,6 +60,12 @@ class MainActivity : ComponentActivity() {
                 homeSignal = homeSignal,
                 settings = current,
                 onSettingsChange = { lifecycleScope.launch { darkIoPrefs.updateSettings(it) } },
+                onResetAll = {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        AppDatabase.open(this@MainActivity).resetAll()
+                        darkIoPrefs.resetPreferences()
+                    }
+                },
                 onOpenNotifications = { lifecycleScope.launch(Dispatchers.Default) { expandNotificationPanel(this@MainActivity) } },
             )
         }

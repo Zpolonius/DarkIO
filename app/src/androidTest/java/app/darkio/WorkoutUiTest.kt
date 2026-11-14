@@ -32,6 +32,8 @@ private class FakeWorkoutDao(
     override suspend fun upsert(workout: WorkoutDay) { data[workout.dayOfWeek] = workout }
     override suspend fun insertCompleted(record: WorkoutRecord) { completed.add(record.date) }
     override suspend fun deleteCompleted(date: String) { completed.remove(date) }
+    override suspend fun clearAllRecords() { completed.clear() }
+    override suspend fun clearAllDays() { data.clear() }
     override suspend fun setCompleted(dayOfWeek: Int, completed: Boolean, dateStr: String) {
         val existing = data[dayOfWeek]
         if (existing != null) {

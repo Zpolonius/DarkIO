@@ -68,3 +68,8 @@ suspend fun DataStore<Preferences>.updateSettings(change: (Settings) -> Settings
         if (new.stepGoal != old.stepGoal) p[StepGoalKey] = new.stepGoal
     }
 }
+
+/** Rydder alle gemte indstillinger og nøgler ved Nulstil alt. */
+suspend fun DataStore<Preferences>.resetPreferences() {
+    edit { it.clear() }
+}

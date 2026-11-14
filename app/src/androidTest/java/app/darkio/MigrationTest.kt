@@ -103,4 +103,78 @@ class MigrationTest {
             assertEquals(0, it.getInt(1))
         }
     }
+
+    @Test
+    fun migrate1To4KeepsChoicesSeedsWorkoutDaysAndAddsShortcutsAndRecords() {
+        helper.createDatabase("migration-test-1-4", 1).apply {
+            execSQL("INSERT INTO app_choice VALUES ('fav','fav.Main',0,0,NULL,2)")
+            execSQL("INSERT INTO app_choice VALUES ('hid','hid.Main',0,1,NULL,NULL)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate("migration-test-1-4", 4, true, MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        db.query("SELECT packageName, hidden, favoriteSlot FROM app_choice ORDER BY packageName").use {
+            val rows = generateSequence { if (it.moveToNext()) listOf(it.getString(0), it.getInt(1), if (it.isNull(2)) null else it.getInt(2)) else null }.toList()
+            assertEquals(
+                listOf(
+                    listOf("fav", 0, 2),
+                    listOf("hid", 1, null),
+                ),
+                rows,
+            )
+        }
+        db.query("SELECT COUNT(*) FROM page_shortcut").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+        db.query("SELECT dayOfWeek, title FROM workout_day ORDER BY dayOfWeek").use {
+            val rows = generateSequence { if (it.moveToNext()) listOf(it.getInt(0), it.getString(1)) else null }.toList()
+            assertEquals(
+                listOf(
+                    listOf(2, "tirsdag: spinning, romaskine, styrke og RPE"),
+                    listOf(4, "torsdag: spinning, romaskine, styrke og RPE"),
+                    listOf(7, "søndag: spinning, romaskine, styrke og RPE"),
+                ),
+                rows,
+            )
+        }
+        db.query("SELECT COUNT(*) FROM workout_record").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+    }
+
+    @Test
+    fun migrate2To4KeepsChoicesAndShortcutsSeedsWorkoutDaysAndAddsRecords() {
+        helper.createDatabase("migration-test-2-4", 2).apply {
+            execSQL("INSERT INTO app_choice VALUES ('fav','fav.Main',0,0,NULL,2)")
+            execSQL("INSERT INTO page_shortcut VALUES (1,'shortcut','shortcut.Main',0,0)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate("migration-test-2-4", 4, true, MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        db.query("SELECT packageName, favoriteSlot FROM app_choice WHERE packageName = 'fav'").use {
+            it.moveToFirst()
+            assertEquals("fav", it.getString(0))
+            assertEquals(2, it.getInt(1))
+        }
+        db.query("SELECT packageName, slot FROM page_shortcut WHERE page = 1").use {
+            it.moveToFirst()
+            assertEquals("shortcut", it.getString(0))
+            assertEquals(0, it.getInt(1))
+        }
+        db.query("SELECT dayOfWeek, title FROM workout_day ORDER BY dayOfWeek").use {
+            val rows = generateSequence { if (it.moveToNext()) listOf(it.getInt(0), it.getString(1)) else null }.toList()
+            assertEquals(
+                listOf(
+                    listOf(2, "tirsdag: spinning, romaskine, styrke og RPE"),
+                    listOf(4, "torsdag: spinning, romaskine, styrke og RPE"),
+                    listOf(7, "søndag: spinning, romaskine, styrke og RPE"),
+                ),
+                rows,
+            )
+        }
+        db.query("SELECT COUNT(*) FROM workout_record").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+    }
 }

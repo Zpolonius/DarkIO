@@ -41,6 +41,12 @@ abstract class WorkoutDao {
     @androidx.room.Upsert
     abstract suspend fun insertCompleted(record: WorkoutRecord)
 
+    @Query("DELETE FROM workout_record")
+    abstract suspend fun clearAllRecords()
+
+    @Query("DELETE FROM workout_day")
+    abstract suspend fun clearAllDays()
+
     @Query("DELETE FROM workout_record WHERE date = :date")
     abstract suspend fun deleteCompleted(date: String)
 
@@ -58,12 +64,16 @@ abstract class WorkoutDao {
     }
 }
 
+fun seedWorkoutDays(db: SupportSQLiteDatabase) {
+    db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (2, 'tirsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+    db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (4, 'torsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+    db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (7, 'søndag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+}
+
 val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `workout_day` (`dayOfWeek` INTEGER NOT NULL, `title` TEXT NOT NULL, `exercises` TEXT NOT NULL, `completedDate` TEXT, PRIMARY KEY(`dayOfWeek`))")
-        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (2, 'tirsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
-        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (4, 'torsdag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
-        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (7, 'søndag: spinning, romaskine, styrke og RPE', 'spinning, romaskine, styrke, RPE', NULL)")
+        seedWorkoutDays(db)
     }
 }
 

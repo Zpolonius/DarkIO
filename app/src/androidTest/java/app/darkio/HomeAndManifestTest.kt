@@ -45,6 +45,29 @@ class HomeAndManifestTest {
     private val debugOnly = setOf("androidx.compose.ui.tooling.PreviewActivity", "androidx.activity.ComponentActivity")
 
     @Test
+    fun dataExtractionRulesConfigured() {
+        val appInfo = pm.getApplicationInfo("app.darkio", 0)
+        assertTrue(
+            "android:allowBackup must be true",
+            (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_ALLOW_BACKUP) != 0,
+        )
+        val parser = context.assets.openXmlResourceParser("AndroidManifest.xml")
+        var dataRulesResId = 0
+        while (parser.eventType != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == org.xmlpull.v1.XmlPullParser.START_TAG && parser.name == "application") {
+                for (i in 0 until parser.attributeCount) {
+                    if (parser.getAttributeName(i) == "dataExtractionRules") {
+                        dataRulesResId = parser.getAttributeResourceValue(i, 0)
+                    }
+                }
+                break
+            }
+            parser.next()
+        }
+        assertTrue("android:dataExtractionRules must be configured", dataRulesResId != 0)
+    }
+
+    @Test
     fun onlyMainActivityIsExported() {
         val flags = PackageManager.GET_ACTIVITIES or PackageManager.GET_SERVICES or
             PackageManager.GET_RECEIVERS or PackageManager.GET_PROVIDERS
