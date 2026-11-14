@@ -3,13 +3,19 @@ package app.darkio
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import android.graphics.Color
 import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import app.darkio.data.AppDatabase
 import app.darkio.data.AppRepository
@@ -32,7 +38,8 @@ class MainActivity : ComponentActivity() {
     private var settings by mutableStateOf<Settings?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // Mørk tone bag systemlinjerne, så ikoner er lyse også når systemet er i lyst tema (N8).
+        enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
         apps = AppRepository(this, lifecycleScope, AppDatabase.open(this).choices())
         // Accent og kort sættes, før første billede tegnes (indtil da vises kun bg).
@@ -43,7 +50,12 @@ class MainActivity : ComponentActivity() {
             }
         }
         setContent {
-            val current = settings ?: return@setContent
+            val current = settings
+            if (current == null) {
+                // Uden gemte indstillinger endnu: mørkt i stedet for en utonet baggrund.
+                Box(Modifier.fillMaxSize().background(DarkIOColors.Bg))
+                return@setContent
+            }
             val list = apps.lists.collectAsState().value
             val hintSeen = darkIoPrefs.hintSeen().collectAsState(initial = true).value
             HomeScreen(

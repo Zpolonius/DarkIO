@@ -4,7 +4,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -21,6 +23,7 @@ object DarkIOColors {
     val Surface = Color(0xFF16161C)
     val SurfaceGlass = Color(0xE616161C)
     val ScrimTop = Color(0xCC0D0D11)
+    val ScrimMid = Color(0x590D0D11)
     val ScrimBottom = Color(0xF20D0D11)
     val ScrimSheet = Color(0xCC0D0D11)
     val Line = Color(0xFF26262F)
@@ -38,6 +41,10 @@ object DarkIOColors {
     val Sky = Color(0xFF8EC5FF)
     val Positive = Mint
     val Danger = Color(0xFFFF9E9E)
+}
+
+object DarkIOShadow {
+    val Text = Shadow(Color(0x80000000), Offset(0f, 1f), 4f)
 }
 
 object DarkIOShapes {

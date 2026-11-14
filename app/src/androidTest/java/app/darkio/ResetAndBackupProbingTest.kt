@@ -49,6 +49,7 @@ class ResetAndBackupProbingTest {
                     accent = AccentChoice.Coral,
                     cards = setOf(HomeCard.Calendar),
                     stepGoal = 15000L,
+                    scrimTop = 65,
                 )
             }
             context.darkIoPrefs.markHintSeen()
@@ -62,6 +63,7 @@ class ResetAndBackupProbingTest {
             assertEquals(AccentChoice.Coral, sBefore.accent)
             assertEquals(setOf(HomeCard.Calendar), sBefore.cards)
             assertEquals(15000L, sBefore.stepGoal)
+            assertEquals(65, sBefore.scrimTop)
 
             // Execute resetAll matching MainActivity
             db.resetAll()
@@ -82,6 +84,7 @@ class ResetAndBackupProbingTest {
             assertEquals(AccentChoice.Lime, sAfter.accent)
             assertEquals(HomeCard.entries.toSet(), sAfter.cards)
             assertEquals(8000L, sAfter.stepGoal)
+            assertEquals(80, sAfter.scrimTop)
 
             // Assert DataStore: hint seen is reset to false
             assertFalse(context.darkIoPrefs.hintSeen().first())

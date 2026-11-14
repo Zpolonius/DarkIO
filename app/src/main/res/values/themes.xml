@@ -3,4 +3,10 @@
     <style name="Theme.DarkIO" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
     </style>
+
+    <!-- Kun hjemskærmen viser brugerens baggrund (F21); Android tegner den, DarkIO rører den aldrig. -->
+    <style name="Theme.DarkIO.Home">
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
 </resources>

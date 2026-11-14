@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -46,8 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.PermissionController
@@ -61,6 +62,7 @@ import app.darkio.dashboard.hasUsageStatsPermission
 import app.darkio.dashboard.openUsageAccessSettings
 import app.darkio.data.AccentChoice
 import app.darkio.data.HomeCard
+import app.darkio.data.SCRIM_TOP_STEP
 import app.darkio.data.STEP_GOAL_STEP
 import app.darkio.data.Settings
 import app.darkio.ui.theme.DarkIOColors
@@ -152,14 +154,30 @@ fun SettingsScreen(
                 }
                 BasicText(
                     formatStepNumber(settings.stepGoal),
-                    Modifier.padding(horizontal = DarkIOSpace.S3).testTag("settingsStepGoal"),
-                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink),
+                    Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("settingsStepGoal"),
+                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink, textAlign = TextAlign.Center),
                 )
                 StepButton(R.string.settings_step_plus, R.string.settings_step_goal_up, "stepGoalUp") {
                     onChange { it.withStepGoal(it.stepGoal + STEP_GOAL_STEP) }
                 }
             }
-            LinkRow(R.string.settings_background, DarkIOColors.InkMuted, Modifier.testTag("link_background").semantics { disabled() })
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(stringResource(R.string.settings_background), Modifier.weight(1f), style = DarkIOType.Item.copy(color = DarkIOColors.Ink))
+                StepButton(R.string.settings_step_minus, R.string.settings_scrim_down, "scrimTopDown") {
+                    onChange { it.withScrimTop(it.scrimTop - SCRIM_TOP_STEP) }
+                }
+                BasicText(
+                    stringResource(R.string.settings_scrim_value, settings.scrimTop),
+                    Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("settingsScrimTop"),
+                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink, textAlign = TextAlign.Center),
+                )
+                StepButton(R.string.settings_step_plus, R.string.settings_scrim_up, "scrimTopUp") {
+                    onChange { it.withScrimTop(it.scrimTop + SCRIM_TOP_STEP) }
+                }
+            }
             LinkRow(R.string.hidden_apps_title, DarkIOColors.Ink, Modifier.clickable(role = Role.Button, onClick = onOpenHidden))
             LinkRow(
                 R.string.settings_reset_all,

@@ -40,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
@@ -178,7 +180,13 @@ fun HomeScreen(
     val motion = tween<IntOffset>(DarkIOMotion.DrawerMs)
     val fade = tween<Float>(DarkIOMotion.DrawerMs)
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(DarkIOColors.Bg)) {
+    // Android tegner brugerens baggrund (windowShowWallpaper); her ligger toningen. Skuffe og søgning dækker den helt (F21).
+    val scrim = if (drawerOpen || query.isNotBlank()) SolidColor(DarkIOColors.Bg) else Brush.verticalGradient(
+        0f to DarkIOColors.Bg.copy(alpha = settings.scrimTop / 100f),
+        0.5f to DarkIOColors.ScrimMid,
+        1f to DarkIOColors.ScrimBottom,
+    )
+    BoxWithConstraints(Modifier.fillMaxSize().background(scrim)) {
         // Swipe-området slutter over systemGestures-zonen, så swipe op ikke kolliderer med Hjem-gesten.
         BoxWithConstraints(
             Modifier
@@ -230,7 +238,12 @@ fun HomeScreen(
                         } else if (p == 2) {
                             BuildPage()
                         }
-                        BasicText(pageLabels[p], style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("page$p"))
+                        // Fast plads over sideprikkerne; på glas, så den kan læses på lyse billeder (N8).
+                        BasicText(
+                            pageLabels[p],
+                            style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft),
+                            modifier = Modifier.align(Alignment.BottomCenter).testTag("page$p").clip(DarkIOShapes.Pill).background(DarkIOColors.SurfaceGlass).padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
+                        )
                     }
                     if (query.isBlank()) {
                         Box(
