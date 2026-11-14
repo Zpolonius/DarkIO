@@ -173,4 +173,21 @@ class AppChoiceDbTest {
         assertEquals(1, row("p").favoriteSlot)
         assertEquals(0, row("q").favoriteSlot)
     }
+
+    @Test
+    fun resetAllClearsChoicesShortcutsRecordsAndReseedsWorkoutDays() = runBlocking {
+        dao.setHidden("p", "p.Main", 0, true)
+        dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = 2)))
+        db.workouts().insertCompleted(app.darkio.data.WorkoutRecord("2026-11-13"))
+        db.workouts().upsert(app.darkio.data.WorkoutDay(1, "mandag", "løb"))
+
+        db.resetAll()
+
+        assertEquals(emptyList<AppChoice>(), dao.all().first())
+        assertEquals(emptyList<app.darkio.data.PageShortcut>(), dao.shortcuts().first())
+        assertEquals(emptyList<String>(), db.workouts().getCompletedDates())
+        val days = db.workouts().getAllWorkouts()
+        assertEquals(listOf(2, 4, 7), days.map { it.dayOfWeek })
+        assertEquals(listOf(null, null, null), days.map { it.completedDate })
+    }
 }

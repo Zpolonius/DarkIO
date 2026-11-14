@@ -172,6 +172,8 @@ class WorkoutProgramTest {
         override suspend fun insertCompleted(record: WorkoutRecord) { completed.add(record.date) }
         override suspend fun deleteCompleted(date: String) { completed.remove(date) }
         override suspend fun deleteDay(dayOfWeek: Int) { data.remove(dayOfWeek) }
+        override suspend fun clearAllRecords() { completed.clear() }
+        override suspend fun clearAllDays() { data.clear() }
     }
 
     private val today = "2026-11-17" // tirsdag

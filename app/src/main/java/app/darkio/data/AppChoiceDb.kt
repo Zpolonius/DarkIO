@@ -79,6 +79,12 @@ abstract class AppChoiceDao {
         upsertShortcuts(set)
     }
 
+    @Query("DELETE FROM app_choice")
+    abstract suspend fun clearAllChoices()
+
+    @Query("DELETE FROM page_shortcut")
+    abstract suspend fun clearAllShortcuts()
+
     @Transaction
     open suspend fun setCategory(packageName: String, activity: String, userSerial: Long, category: String) {
         val choice = find(packageName, activity, userSerial) ?: AppChoice(packageName, activity, userSerial)
@@ -98,6 +104,15 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun choices(): AppChoiceDao
     abstract fun workouts(): WorkoutDao
 
+    @Transaction
+    open suspend fun resetAll() {
+        choices().clearAllChoices()
+        choices().clearAllShortcuts()
+        workouts().clearAllRecords()
+        workouts().clearAllDays()
+        seedWorkoutDays(openHelper.writableDatabase)
+    }
+
     companion object {
         @Volatile private var instance: AppDatabase? = null
 
@@ -108,9 +123,7 @@ abstract class AppDatabase : RoomDatabase() {
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
-                        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (2, 'tirsdag: spinning, romaskine, styrke', 'spinning, romaskine, styrke', NULL)")
-                        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (4, 'torsdag: spinning, romaskine, styrke', 'spinning, romaskine, styrke', NULL)")
-                        db.execSQL("INSERT OR REPLACE INTO `workout_day` (`dayOfWeek`, `title`, `exercises`, `completedDate`) VALUES (7, 'søndag: spinning, romaskine, styrke', 'spinning, romaskine, styrke', NULL)")
+                        seedWorkoutDays(db)
                     }
                 })
                 .build().also { instance = it }

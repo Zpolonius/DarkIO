@@ -47,6 +47,8 @@ import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOSize
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -61,6 +63,7 @@ class SettingsUiTest {
     private val requested = mutableListOf<HomeCard>()
     private var current = Settings()
     private var homeSignal by mutableIntStateOf(0)
+    private var resetCalled = false
 
     @After
     fun resetAccent() {
@@ -87,6 +90,7 @@ class SettingsUiTest {
                 DarkIOColors.Accent = n.accent.color
                 s = Triple(n.cards, n.accent, n.stepGoal)
             },
+            onResetAll = { resetCalled = true },
             requestAccess = { requested += it },
         )
     }
@@ -241,6 +245,39 @@ class SettingsUiTest {
         rule.onNodeWithText(context.getString(R.string.hidden_apps_title)).performClick()
         rule.runOnIdle { homeSignal++ }
         rule.onNodeWithTag("hiddenApps").assertDoesNotExist()
+        rule.onNodeWithText(title).assertDoesNotExist()
+        rule.onNodeWithTag("homePager").assertIsDisplayed()
+    }
+
+    @Test
+    fun resetAllActionRequiresConfirmationAndCanBeCancelled() {
+        show()
+        longPressMargin()
+        val link = rule.onNodeWithTag("link_reset_all")
+        link.assertHeightIsAtLeast(DarkIOSize.TouchTarget)
+        link.performClick()
+        val confirm = rule.onNodeWithTag("confirmReset")
+        val cancel = rule.onNodeWithTag("cancelReset")
+        confirm.assertIsDisplayed()
+        confirm.assertHeightIsAtLeast(DarkIOSize.TouchTarget)
+        assertEquals(DarkIOColors.Surface.toArgb(), pixel("confirmReset", 0.05f))
+        cancel.assertIsDisplayed()
+        cancel.assertHeightIsAtLeast(DarkIOSize.TouchTarget)
+        cancel.performClick()
+        confirm.assertDoesNotExist()
+        assertFalse(resetCalled)
+
+        link.performClick()
+        confirm.assertIsDisplayed()
+        back()
+        confirm.assertDoesNotExist()
+        assertFalse(resetCalled)
+
+        link.performClick()
+        confirm.assertIsDisplayed()
+        confirm.performClick()
+        confirm.assertDoesNotExist()
+        assertTrue(resetCalled)
         rule.onNodeWithText(title).assertDoesNotExist()
         rule.onNodeWithTag("homePager").assertIsDisplayed()
     }

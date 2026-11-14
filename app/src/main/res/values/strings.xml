@@ -13,6 +13,11 @@
     <string name="settings_step_goal">Skridtmål</string>
     <string name="settings_workout_program">Træningsprogram</string>
     <string name="settings_background">Baggrund</string>
+    <string name="settings_reset_all">Nulstil alt</string>
+    <string name="settings_reset_confirm_title">// nulstil alt</string>
+    <string name="settings_reset_confirm_desc">Alle dine valg, favoritter, genveje, indstillinger og træningsdata slettes.</string>
+    <string name="settings_reset_confirm_action">Nulstil alt</string>
+    <string name="settings_reset_cancel">Annullér</string>
     <string name="settings_step_minus">−</string>
     <string name="settings_step_plus">+</string>
     <string name="settings_step_goal_down">Sænk skridtmål</string>

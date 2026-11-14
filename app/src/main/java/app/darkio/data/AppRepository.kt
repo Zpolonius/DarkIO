@@ -31,15 +31,27 @@ fun appId(packageName: String, activity: String, userSerial: Long): String =
     "$packageName/$activity#$userSerial"
 
 /** Launchable apps of the current profile, split into visible and hidden by the user's choices in [choices]. */
+fun buildAppLists(
+    installed: List<AppEntry>,
+    choices: List<AppChoice>,
+    shortcuts: List<PageShortcut>,
+): AppLists {
+    val installedIds = installed.map { it.id }.toSet()
+    fun AppChoice.id() = appId(packageName, activity, userSerial)
+    val validChoices = choices.filter { it.id() in installedIds }
+    val custom = validChoices.filter { it.customCategory != null }.associate { it.id() to it.customCategory!! }
+    val slots = validChoices.filter { it.favoriteSlot != null }.associate { it.id() to it.favoriteSlot!! }
+    val validShortcuts = shortcuts.filter { appId(it.packageName, it.activity, it.userSerial) in installedIds }
+    return splitApps(withCustomCategories(installed, custom), validChoices.filter { it.hidden }.map { it.id() }.toSet())
+        .copy(favoriteSlots = slots, shortcutSlots = (0 until PAGE_COUNT).associateWith { shortcutSlotsOnPage(validShortcuts, it) })
+}
+
 class AppRepository(private val context: Context, private val scope: CoroutineScope, private val choices: AppChoiceDao) {
     private val launcherApps = context.getSystemService(LauncherApps::class.java)
     private val userManager = context.getSystemService(UserManager::class.java)
     private val installed = MutableStateFlow<List<AppEntry>>(emptyList())
     val lists: StateFlow<AppLists> = combine(installed, choices.all(), choices.shortcuts()) { apps, rows, shortcuts ->
-        fun AppChoice.id() = appId(packageName, activity, userSerial)
-        val custom = rows.filter { it.customCategory != null }.associate { it.id() to it.customCategory!! }
-        val slots = rows.filter { it.favoriteSlot != null }.associate { it.id() to it.favoriteSlot!! }
-        splitApps(withCustomCategories(apps, custom), rows.filter { it.hidden }.map { it.id() }.toSet()).copy(favoriteSlots = slots, shortcutSlots = (0 until PAGE_COUNT).associateWith { shortcutSlotsOnPage(shortcuts, it) })
+        buildAppLists(apps, rows, shortcuts)
     }
         .stateIn(scope, SharingStarted.Eagerly, AppLists(emptyList(), emptyList()))
     private var job: Job? = null

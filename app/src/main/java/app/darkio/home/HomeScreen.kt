@@ -101,6 +101,7 @@ fun HomeScreen(
     onOpenNotifications: () -> Unit = {},
     settings: Settings = Settings(),
     onSettingsChange: ((Settings) -> Settings) -> Unit = {},
+    onResetAll: () -> Unit = {},
     requestAccess: ((HomeCard) -> Unit)? = null,
 ) {
     val pageLabels = listOf(R.string.page_today, R.string.page_training, R.string.page_build).map { stringResource(it) }
@@ -158,7 +159,18 @@ fun HomeScreen(
         return
     }
     if (settingsOpen) {
-        SettingsScreen(settings, onSettingsChange, onOpenHidden = { hiddenOpen = true }, onOpenWorkout = { workoutOpen = true }, requestAccess = requestAccess)
+        SettingsScreen(
+            settings = settings,
+            onChange = onSettingsChange,
+            onOpenHidden = { hiddenOpen = true },
+            onOpenWorkout = { workoutOpen = true },
+            onResetAll = {
+                settingsOpen = false
+                scope.launch { pager.scrollToPage(0) }
+                onResetAll()
+            },
+            requestAccess = requestAccess,
+        )
         return
     }
     val canOpenSettings = !drawerOpen && query.isEmpty() && menuApp == null
