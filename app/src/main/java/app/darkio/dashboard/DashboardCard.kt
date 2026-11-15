@@ -3,8 +3,10 @@ package app.darkio.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -23,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import app.darkio.R
@@ -64,6 +67,7 @@ fun <T> LoadedCard(
     needsAccessTitle: String? = null,
     needsAccessExplanation: String? = null,
     reloadTrigger: Any? = null,
+    verticalPadding: Dp = DarkIOSpace.S4,
     content: @Composable (T) -> Unit,
 ) {
     var state by remember { mutableStateOf<CardState<T>?>(null) }
@@ -85,26 +89,40 @@ fun <T> LoadedCard(
             .clip(DarkIOShapes.Lg)
             .background(DarkIOColors.SurfaceGlass)
             .border(DarkIOSize.LineWidth, DarkIOColors.Line, DarkIOShapes.Lg)
-            .padding(DarkIOSpace.S4),
+            .padding(horizontal = DarkIOSpace.S4, vertical = verticalPadding),
     ) {
         when (val s = state) {
             is CardState.Content -> content(s.value)
             CardState.NeedsAccess -> {
-                if (needsAccessTitle != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (needsAccessTitle != null) {
+                        BasicText(
+                            needsAccessTitle,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = DarkIOSpace.S2),
+                            style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                        )
+                    }
                     BasicText(
-                        needsAccessTitle,
-                        modifier = Modifier.padding(bottom = DarkIOSpace.S1),
-                        style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                        stringResource(R.string.card_grant_access),
+                        modifier = Modifier
+                            .heightIn(min = DarkIOSize.TouchMin)
+                            .clickable(role = Role.Button, onClick = onGrantAccess)
+                            .padding(vertical = DarkIOSpace.S2),
+                        style = DarkIOType.Button.copy(color = DarkIOColors.Accent),
                     )
                 }
                 if (needsAccessExplanation != null) {
                     BasicText(
                         needsAccessExplanation,
-                        modifier = Modifier.padding(bottom = DarkIOSpace.S2),
                         style = DarkIOType.Data.copy(color = DarkIOColors.InkMuted),
                     )
                 }
-                CardMessage(null, stringResource(R.string.card_grant_access), onGrantAccess)
             }
             CardState.Error -> CardMessage(stringResource(R.string.card_error), stringResource(R.string.card_retry)) { attempt++ }
             null -> Unit

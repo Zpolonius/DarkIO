@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
+import app.darkio.dashboard.ActivityGridCard
 import app.darkio.dashboard.CalendarCard
 import app.darkio.dashboard.CaloriesCard
 import app.darkio.dashboard.ClockCard
@@ -120,6 +122,7 @@ fun HomeScreen(
     var hiddenOpen by rememberSaveable { mutableStateOf(false) }
     var workoutOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    var workoutReloadCounter by remember { mutableIntStateOf(0) }
     LaunchedEffect(homeSignal) {
         if (homeSignal > 0) {
             settingsOpen = false
@@ -227,13 +230,30 @@ fun HomeScreen(
                                 Modifier
                                     .align(Alignment.TopCenter)
                                     .fillMaxWidth()
-                                    .padding(horizontal = DarkIOSpace.S5)
-                                    .padding(top = DarkIOSpace.TopInset),
-                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S3),
+                                    .padding(horizontal = DarkIOSpace.S4)
+                                    .padding(top = DarkIOSpace.TopInset - DarkIOSpace.S2, bottom = DarkIOSpace.S6),
+                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S1),
                             ) {
-                                if (HomeCard.Workout in settings.cards) WorkoutCard(Modifier.testTag("card_Workout"))
-                                if (HomeCard.Steps in settings.cards) StepsCard(Modifier.testTag("card_Steps"), goal = settings.stepGoal)
-                                if (HomeCard.Calories in settings.cards) CaloriesCard(Modifier.testTag("card_Calories"))
+                                if (HomeCard.Workout in settings.cards) WorkoutCard(
+                                    modifier = Modifier.testTag("card_Workout"),
+                                    onCompletedChanged = { workoutReloadCounter++ },
+                                    verticalPadding = DarkIOSpace.S2,
+                                )
+                                if (HomeCard.Workout in settings.cards || HomeCard.Steps in settings.cards) ActivityGridCard(
+                                    modifier = Modifier.testTag("card_ActivityGrid"),
+                                    stepGoal = settings.stepGoal,
+                                    reloadTrigger = workoutReloadCounter,
+                                    verticalPadding = DarkIOSpace.S2,
+                                )
+                                if (HomeCard.Steps in settings.cards) StepsCard(
+                                    modifier = Modifier.fillMaxWidth().testTag("card_Steps"),
+                                    goal = settings.stepGoal,
+                                    verticalPadding = DarkIOSpace.S2,
+                                )
+                                if (HomeCard.Calories in settings.cards) CaloriesCard(
+                                    modifier = Modifier.fillMaxWidth().testTag("card_Calories"),
+                                    verticalPadding = DarkIOSpace.S2,
+                                )
                             }
                         } else if (p == 2) {
                             BuildPage()
