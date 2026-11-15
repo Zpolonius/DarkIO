@@ -13,6 +13,9 @@
     <string name="settings_step_goal">Skridtmål</string>
     <string name="settings_workout_program">Træningsprogram</string>
     <string name="settings_background">Baggrund</string>
+    <string name="settings_scrim_down">Sænk toning i toppen</string>
+    <string name="settings_scrim_up">Hæv toning i toppen</string>
+    <string name="settings_scrim_value">%1$d %%</string>
     <string name="settings_reset_all">Nulstil alt</string>
     <string name="settings_reset_confirm_title">// nulstil alt</string>
     <string name="settings_reset_confirm_desc">Alle dine valg, favoritter, genveje, indstillinger og træningsdata slettes.</string>

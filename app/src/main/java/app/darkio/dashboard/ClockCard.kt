@@ -7,6 +7,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import app.darkio.ui.theme.DarkIOColors
+import app.darkio.ui.theme.DarkIOShadow
 import app.darkio.ui.theme.DarkIOType
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -36,8 +37,8 @@ fun ClockCard(modifier: Modifier = Modifier, now: () -> LocalDateTime = LocalDat
                 append(formatTime(t))
                 withStyle(SpanStyle(color = DarkIOColors.Accent)) { append("_") }
             },
-            style = DarkIOType.Clock.copy(color = DarkIOColors.Ink),
+            style = DarkIOType.Clock.copy(color = DarkIOColors.Ink, shadow = DarkIOShadow.Text),
         )
-        BasicText(formatDate(t), style = DarkIOType.Data.copy(color = DarkIOColors.InkMuted))
+        BasicText(formatDate(t), style = DarkIOType.Data.copy(color = DarkIOColors.InkMuted, shadow = DarkIOShadow.Text))
     }
 }

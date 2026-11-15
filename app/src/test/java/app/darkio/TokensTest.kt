@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOMotion
+import app.darkio.ui.theme.DarkIOShadow
 import app.darkio.ui.theme.DarkIOSize
 import java.io.File
 import kotlin.math.roundToInt
@@ -16,7 +17,7 @@ class TokensTest {
 
     private val kotlinColors = mapOf(
         "bg" to DarkIOColors.Bg, "surface" to DarkIOColors.Surface, "surface-glass" to DarkIOColors.SurfaceGlass,
-        "scrim-top" to DarkIOColors.ScrimTop, "scrim-bottom" to DarkIOColors.ScrimBottom, "scrim-sheet" to DarkIOColors.ScrimSheet,
+        "scrim-top" to DarkIOColors.ScrimTop, "scrim-mid" to DarkIOColors.ScrimMid, "scrim-bottom" to DarkIOColors.ScrimBottom, "scrim-sheet" to DarkIOColors.ScrimSheet,
         "line" to DarkIOColors.Line, "line-strong" to DarkIOColors.LineStrong,
         "ink" to DarkIOColors.Ink, "ink-soft" to DarkIOColors.InkSoft, "ink-muted" to DarkIOColors.InkMuted,
         "accent" to DarkIOColors.AccentLime, "pastel-coral" to DarkIOColors.Coral, "pastel-lilac" to DarkIOColors.Lilac,
@@ -52,6 +53,16 @@ class TokensTest {
         assertEquals(530L, DarkIOMotion.TypewriterBlinkMs)
         assertEquals(7.dp, DarkIOSize.CursorWidth)
         assertEquals(15.dp, DarkIOSize.CursorHeight)
+    }
+
+    @Test
+    fun textShadowTokensMatch() {
+        val tokens = Regex(""""name":\s*"([a-z-]+)",\s*"value":\s*"([^"]+)"""")
+            .findAll(json.readText()).associate { it.groupValues[1] to it.groupValues[2] }
+        val shadow = DarkIOShadow.Text
+        assertEquals(parse(tokens.getValue("text-shadow-color")).toArgb(), shadow.color.toArgb())
+        assertEquals(tokens.getValue("text-shadow-offset-y"), "${shadow.offset.y.roundToInt()}px")
+        assertEquals(tokens.getValue("text-shadow-blur"), "${shadow.blurRadius.roundToInt()}px")
     }
 
     private fun parse(v: String): Color =
