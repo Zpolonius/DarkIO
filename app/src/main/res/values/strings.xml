@@ -111,6 +111,18 @@
     <!-- "pas" er ens i ental og flertal på dansk, hvorfor pluralis-formen ikke er nødvendig her -->
     <string name="workout_streak" tools:ignore="PluralsCandidate">%1$d pas i træk</string>
 
+    <string name="activity_grid_title">aktivitet</string>
+    <plurals name="activity_grid_goal_days">
+        <item quantity="one">%d dag med mål</item>
+        <item quantity="other">%d dage med mål</item>
+    </plurals>
+    <plurals name="activity_grid_workouts">
+        <item quantity="one">%d træning</item>
+        <item quantity="other">%d træninger</item>
+    </plurals>
+    <string name="activity_grid_grant_history">giv adgang til historik</string>
+    <string name="activity_grid_talkback_desc">Aktivitet: %1$s, %2$s</string>
+
     <string-array name="workout_day_names">
         <item>mandag</item>
         <item>tirsdag</item>

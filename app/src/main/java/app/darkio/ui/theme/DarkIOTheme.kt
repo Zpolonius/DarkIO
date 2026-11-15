@@ -95,6 +95,10 @@ object DarkIOSize {
     val ToggleTrackHeight = 32.dp
     val ToggleKnob = 20.dp
     val SwatchRing = 2.dp
+    val GridCellSize = 8.dp
+    val GridCellGap = 2.dp
+    val GridDotSize = 4.dp
+    val GridDash = 2.dp
 }
 
 private val Display = FontFamily(

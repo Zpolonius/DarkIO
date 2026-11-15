@@ -69,7 +69,7 @@ private fun Preferences.toSettings() = Settings(
     scrimTop = (this[ScrimTopKey] ?: DEFAULT_SCRIM_TOP).coerceIn(MIN_SCRIM_TOP, MAX_SCRIM_TOP),
 )
 
-/** Mangler en nøgle (første start, eller ældre installation), gælder standarden: lime, alle kort til, 8.000 skridt, toning 80 %. */
+/** Mangler en nøgle (første start, eller ældre installation), gælder standarden: lime, alle kort til, 10.000 skridt, toning 80 %. */
 fun DataStore<Preferences>.settings(): Flow<Settings> = data.map { it.toSettings() }
 
 /** Anvender [change] på de gemte værdier i selve skrivningen, så hurtige ændringer ikke overskriver hinanden. Kun ændrede nøgler skrives. */
