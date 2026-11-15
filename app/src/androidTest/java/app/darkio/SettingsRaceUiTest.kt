@@ -44,9 +44,9 @@ class SettingsRaceUiTest {
     fun twoFastPlusTapsRaiseGoalTwice() {
         show()
         rule.onNodeWithTag("stepGoalUp").performTouchInput { click(); advanceEventTime(150); click() }
-        rule.waitUntil(2_000) { runBlocking { store.settings().first().stepGoal } != 8_000L }
+        rule.waitUntil(2_000) { runBlocking { store.settings().first().stepGoal } != 10_000L }
         Thread.sleep(300)
-        rule.onNodeWithTag("settingsStepGoal").assertTextContains("9.000", substring = true)
+        rule.onNodeWithTag("settingsStepGoal").assertTextContains("11.000", substring = true)
     }
 
     @Test

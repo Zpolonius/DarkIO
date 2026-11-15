@@ -32,7 +32,7 @@ class SettingsStoreTest {
         assertEquals(AccentChoice.Lime, s.accent)
         assertEquals(HomeCard.entries.toSet(), s.cards)
         assertEquals(DEFAULT_STEP_GOAL, s.stepGoal)
-        assertEquals(8_000L, s.stepGoal)
+        assertEquals(10_000L, s.stepGoal)
         assertEquals(80, s.scrimTop)
     }
 

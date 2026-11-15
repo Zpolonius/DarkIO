@@ -65,6 +65,22 @@ class TokensTest {
         assertEquals(tokens.getValue("text-shadow-blur"), "${shadow.blurRadius.roundToInt()}px")
     }
 
+    @Test
+    fun gridTokensMatch() {
+        val tokens = Regex(""""name":\s*"([a-z-]+)",\s*"value":\s*"([^"]+)"""")
+            .findAll(json.readText()).associate { it.groupValues[1] to it.groupValues[2] }
+
+        assertEquals("8px", tokens["grid-cell-size"])
+        assertEquals("2px", tokens["grid-cell-gap"])
+        assertEquals("4px", tokens["grid-dot-size"])
+        assertEquals("2px", tokens["grid-dash"])
+
+        assertEquals(8.dp, DarkIOSize.GridCellSize)
+        assertEquals(2.dp, DarkIOSize.GridCellGap)
+        assertEquals(4.dp, DarkIOSize.GridDotSize)
+        assertEquals(2.dp, DarkIOSize.GridDash)
+    }
+
     private fun parse(v: String): Color =
         if (v.startsWith("#")) Color(0xFF000000 or v.drop(1).toLong(16))
         else v.substringAfter("(").substringBefore(")").split(",").map { it.trim() }.let { (r, g, b, a) ->

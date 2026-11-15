@@ -83,7 +83,7 @@ class ResetAndBackupProbingTest {
             val sAfter = context.darkIoPrefs.settings().first()
             assertEquals(AccentChoice.Lime, sAfter.accent)
             assertEquals(HomeCard.entries.toSet(), sAfter.cards)
-            assertEquals(8000L, sAfter.stepGoal)
+            assertEquals(10000L, sAfter.stepGoal)
             assertEquals(80, sAfter.scrimTop)
 
             // Assert DataStore: hint seen is reset to false
