@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DarkIO</string>
     <string name="page_today">i dag</string>
     <string name="page_training">træning</string>
     <string name="page_build">byg</string>
-    <string name="home_all_apps">alle apps</string>
     <string name="welcome_prompt">darkio --hej</string>
     <string name="hint_swipe_up">// swipe op for alle apps</string>
     <string name="settings_title">Indstillinger</string>
@@ -109,7 +108,8 @@
     <string name="workout_program_delete">slet pas</string>
     <string name="workout_program_rpe_down">Sænk RPE</string>
     <string name="workout_program_rpe_up">Hæv RPE</string>
-    <string name="workout_streak">%1$d pas i træk</string>
+    <!-- "pas" er ens i ental og flertal på dansk, hvorfor pluralis-formen ikke er nødvendig her -->
+    <string name="workout_streak" tools:ignore="PluralsCandidate">%1$d pas i træk</string>
 
     <string-array name="workout_day_names">
         <item>mandag</item>
