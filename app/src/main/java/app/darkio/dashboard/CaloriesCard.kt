@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
@@ -155,6 +156,7 @@ fun CaloriesCard(
     onGrantAccess: (() -> Unit)? = null,
     isFoodAdvisorInstalled: (suspend () -> Boolean)? = null,
     onOpenFoodAdvisor: (() -> Unit)? = null,
+    verticalPadding: Dp = DarkIOSpace.S4,
     now: () -> Instant = Instant::now,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ) {
@@ -173,6 +175,7 @@ fun CaloriesCard(
             )
         },
         modifier = modifier,
+        verticalPadding = verticalPadding,
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
         reloadTrigger = permissionAttempt,
         onGrantAccess = onGrantAccess ?: {

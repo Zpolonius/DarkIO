@@ -8,7 +8,7 @@ En personlig, legende Android-hjemskærm med et dashboard øverst og en app-skuf
 
 **Mål:** v1 er godt nok til at erstatte telefonens standard-launcher i daglig brug i én uge uden at du skifter tilbage.
 
-**Det er godt nok, når** alle krav F1–F21 og N1–N11 nedenfor er opfyldt, **og det er bevist ved at** hver krav-række har en grøn automatisk test eller et dokumenteret manuelt testskridt med skærmbillede, og verifikationsrunden (afsnit 7) er gennemført uden åbne fund af typen *kritisk* eller *høj*.
+**Det er godt nok, når** alle krav F1–F22 og N1–N11 nedenfor er opfyldt, **og det er bevist ved at** hver krav-række har en grøn automatisk test eller et dokumenteret manuelt testskridt med skærmbillede, og verifikationsrunden (afsnit 7) er gennemført uden åbne fund af typen *kritisk* eller *høj*.
 
 **Målgruppe:** dig selv, på din egen telefon. Appen installeres direkte fra Android Studio (sideload), ikke via Google Play.
 
@@ -28,15 +28,15 @@ Tilbage og Hjem fører altid tilbage til hjemskærmen, og skuffen lukker ved swi
 
 ## Funktionelle krav
 
-21 krav dækker v1. Kolonnen *Bevis* fortæller test-agenten præcis, hvordan kravet skal godkendes: **Unit** = automatisk test af logik, **UI-test** = automatisk Compose-test på emulator, **Manuel** = testskridt på din telefon med skærmbillede.
+22 krav dækker v1. Kolonnen *Bevis* fortæller test-agenten præcis, hvordan kravet skal godkendes: **Unit** = automatisk test af logik, **UI-test** = automatisk Compose-test på emulator, **Manuel** = testskridt på din telefon med skærmbillede.
 
 | ID | Krav | Acceptkriterie | Bevis |
 | --- | --- | --- | --- |
 | F1 | Appen kan vælges som hjemskærm | Tryk på Hjem efter installation giver valget, og valgt launcher åbner på under 1 sekund | Manuel + UI-test der tjekker at appen svarer på HOME-intent |
 | F2 | Ur- og datokort | Viser tid og dansk dato („søndag 8. november“); opdateres hvert minut uden at skærmen skal genindlæses | Unit (formatering) + UI-test |
 | F3 | Kalenderkort | Viser næste aftale de næste 24 timer. Uden adgang vises „Giv adgang til kalender“, og intet crasher | Unit + Manuel (giv/afvis adgang) |
-| F4 | Dagens træning | Viser dagens pas fra dit program (tirsdag, torsdag, søndag: spinning, romaskine, styrke og RPE). Kan markeres som gennemført. På træningssiden vises ugen (træningsdage, gennemførte pas) og antal pas i træk; andre dage står der „hviledag\_“. Programmet redigeres under Indstillinger og gemmes lokalt | Unit (rigtig dag, hviledag, gennemført nulstilles ved midnat) + UI-test |
-| F5 | Skridt | Viser dagens skridt og en bjælke mod dit mål (standard 8.000, kan ændres). Læses fra Health Connect med READ\_STEPS. Uden adgang vises „giv adgang“ | UI-test |
+| F4 | Dagens træning | Viser dagens pas fra dit program (tirsdag, torsdag, søndag: spinning, romaskine, styrke og RPE). Kan markeres som gennemført. Viser antal pas i træk; andre dage står der „hviledag\_“. Ugeoversigten er erstattet af aktivitetsgitteret (F22). Programmet redigeres under Indstillinger og gemmes lokalt | Unit (rigtig dag, hviledag, gennemført nulstilles ved midnat) + UI-test |
+| F5 | Skridt | Viser dagens skridt og en bjælke mod dit mål (standard 10.000, kan ændres). Læses fra Health Connect med READ\_STEPS. Uden adgang vises „giv adgang“ | UI-test |
 | F6 | Favoritter | 4 faste favoritter i en dock nederst på alle sider, plus en række med 4 genveje der hører til den enkelte side. Begge kan tilføjes, fjernes og omarrangeres | UI-test |
 | F7 | App-skuffe | Viser alle apps, der kan startes, som et 4-kolonners gitter med appens rigtige ikon, alfabetisk. Gitteret står mod bunden, så de sidste rækker er tættest på tommelfingeren. Åbner med swipe op eller gitter-knappen på hjemskærmen | UI-test med 200 falske apps |
 | F8 | Kategorier | Apps sorteres automatisk i kategorier (Alle, Social, Spil, Foto, Arbejde, Værktøj, Andet). Man skifter kategori med ikoner i en navigationsbar nederst i skuffen, mindst 48 dp høje. Du kan flytte en app til en anden kategori, og valget huskes | Unit (kortlægning) + UI-test |
@@ -51,8 +51,9 @@ Tilbage og Hjem fører altid tilbage til hjemskærmen, og skuffen lukker ved swi
 | F17 | Dagens vibe-coding-tip | Viser ét tip om dagen fra en fast liste på mindst 60 tips, der ligger i appen. Samme tip hele dagen, nyt efter midnat, ingen gentagelse før listen er brugt. Langt tryk kopierer tippet. På byg-siden vises tippet stort med en kopier-knap og de to seneste tips | Unit (samme tip hele dagen, skift ved midnat, ingen gentagelse) + UI-test |
 | F18 | Forbrændt + genvej til FoodAdvisor | Viser forbrændte kalorier i dag fra Health Connect (READ\_TOTAL\_CALORIES\_BURNED). Hele kortet er et link med ↗ og „+ log mad“, der åbner FoodAdvisor. Indtag og kcal tilbage vises ikke, fordi FoodAdvisor ikke deler ernæring med Health Connect. Er FoodAdvisor ikke installeret, skjules „+ log mad“ | Unit (dagens sum, skift ved midnat) + manuel: tallet matcher Fitbit/Health Connect, tryk åbner FoodAdvisor |
 | F19 | Skrivemaskine-effekt | Dagens tip, velkomsten og tomme tilstande skrives frem tegn for tegn (16 ms pr. tegn, højst 1,5 s) med en blinkende accent-markør. Kører én gang pr. tekst pr. dag; et tryk springer over. Med „Fjern animationer“ slået til vises teksten straks. Skærmlæseren får hele teksten med det samme. Bruges aldrig på app-navne, søgeresultater, tal eller fejl | UI-test (fuld tekst efter 1,5 s, tryk viser alt, kun én gang pr. dag, ingen animation med animationer slået fra) + TalkBack-test |
-| F20 | Tre sider på hjemskærmen | Side 1 „i dag“: ur, næste aftale, fokus, dagens tip. Side 2 „træning“: dagens pas med ugeoversigt, skridt, forbrændt. Side 3 „byg“: dagens tip i stort format og tidligere tips. Hver side har sin egen række med 4 genveje; dock, søgefelt og sideprikker står fast nederst på alle sider. Skift med vandret swipe eller tryk på prikkerne (44 dp trykflade). Hjem-knappen viser altid side 1 | UI-test (swipe skifter side, prikker følger med, Hjem nulstiller til side 1, favoritter flytter sig ikke) + manuel med én hånd |
+| F20 | Tre sider på hjemskærmen | Side 1 „i dag“: ur, næste aftale, fokus, dagens tip. Side 2 „træning“: dagens pas, aktivitetsgitter for skridt og træning (F22), skridt, forbrændt. Side 3 „byg“: dagens tip i stort format og tidligere tips. Hver side har sin egen række med 4 genveje; dock, søgefelt og sideprikker står fast nederst på alle sider. Skift med vandret swipe eller tryk på prikkerne (44 dp trykflade). Hjem-knappen viser altid side 1 | UI-test (swipe skifter side, prikker følger med, Hjem nulstiller til side 1, favoritter flytter sig ikke) + manuel med én hånd |
 | F21 | Din egen baggrund | Hjemskærmen viser den baggrund, der allerede er sat på telefonen (temaet windowShowWallpaper). DarkIO læser, kopierer og ændrer aldrig billedet og beder ikke om tilladelse til det. En toning (80 % top, ca. 35 % midt, 95 % bund) holder teksten læsbar; topniveauet kan justeres 60–90 % i Indstillinger. Skuffe, søgning og indstillinger er helt mørke | Manuel: din nuværende baggrund ses efter skift til DarkIO og er uændret efter skift tilbage. UI-test af kontrast med en hvid og en sort testbaggrund |
+| F22 | Aktivitetsgitter | 20 ugers gitter over daglige skridt og gennemførte træninger på træningssiden. Dage over skridtmål vises i pastel-mint; gennemførte træninger som pastel-coral prik; i dag har accent-ramme; ældre dage (>30 dage) uden historikadgang vises med stiplet ramme og knap til at give adgang. Over gitteret vises antal måldage og træninger. TalkBack læser én samlet beskrivelse | Unit (sommertid, 10.000 grænse, ugestart mandag, ældre dage) + UI-test |
 
 ## Ikke-funktionelle krav
 
@@ -63,7 +64,7 @@ En launcher kører hele tiden og ser alle dine apps, så hastighed og privatliv 
 | N1 | Hastighed | Dashboard vises under 500 ms efter Hjem; skuffen åbner under 150 ms og scroller uden hak | Macrobenchmark-test + manuel på telefon |
 | N2 | Hukommelse | Ingen hukommelseslæk efter 50 åbn/luk af skuffen | LeakCanary i debug-build |
 | N3 | Stabilitet | Fejler et kort (fx skridt), vises en fejltekst i kortet, og resten af hjemskærmen virker | Unit-test der kaster fejl i hvert kort |
-| N4 | Tilladelser | Kun: kalender, udvid statuslinje, adgang til brugsdata (PACKAGE\_USAGE\_STATS) og Health Connect READ\_STEPS og READ\_TOTAL\_CALORIES\_BURNED, samt REQUEST\_DELETE\_PACKAGES (gives ved installation; Android viser altid sin egen bekræftelse ved afinstallation). Hver tilladelse spørges først, når kortet slås til. Ingen INTERNET. **Ingen** QUERY\_ALL\_PACKAGES | Security-agent læser manifest |
+| N4 | Tilladelser | Kun: kalender, udvid statuslinje, adgang til brugsdata (PACKAGE\_USAGE\_STATS) og Health Connect READ\_STEPS, READ\_TOTAL\_CALORIES\_BURNED og READ\_HEALTH\_DATA\_HISTORY, samt REQUEST\_DELETE\_PACKAGES (gives ved installation; Android viser altid sin egen bekræftelse ved afinstallation). Hver tilladelse spørges først, når kortet slås til eller vises. Ingen INTERNET. **Ingen** QUERY\_ALL\_PACKAGES | Security-agent læser manifest |
 | N5 | Privatliv | Intet forlader telefonen: DarkIO har ingen internetadgang. Sundheds-, kalender- og brugsdata læses kun og gemmes ikke af DarkIO. Ingen analytics eller reklame-SDK’er | Security-agent gennemgår afhængigheder og netværkskald |
 | N7 | Ærlighed | „Skjul apps“ er en oprydning, ikke en lås. Det står i appen | UI/UX-agent |
 | N8 | Tilgængelighed | Trykflader mindst 48 dp, kontrast mindst 4,5:1, TalkBack-labels, følger systemets skriftstørrelse og „reducer animationer“ | Accessibility Scanner + UI-test med stor skrift |

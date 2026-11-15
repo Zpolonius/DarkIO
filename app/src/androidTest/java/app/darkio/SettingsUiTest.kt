@@ -147,7 +147,7 @@ class SettingsUiTest {
         longPressMargin()
         HomeCard.entries.forEach { rule.onNodeWithTag("toggle_${it.name}").assertIsOn() }
         rule.onNodeWithTag("accent_Lime").assertIsSelected()
-        rule.onNodeWithTag("settingsStepGoal").assertTextContains("8.000", substring = true)
+        rule.onNodeWithTag("settingsStepGoal").assertTextContains("10.000", substring = true)
     }
 
     @Test
@@ -207,14 +207,14 @@ class SettingsUiTest {
                 SettingsScreen(Settings(stepGoal = goal), { change -> goal = change(Settings(stepGoal = goal)).stepGoal }, {}, {}, Modifier.fillMaxWidth().weight(1f), requestAccess = {})
             }
         }
-        rule.onNodeWithTag("stepsCount").assertTextContains("8.000", substring = true)
+        rule.onNodeWithTag("stepsCount").assertTextContains("10.000", substring = true)
         rule.onNodeWithTag("stepGoalUp").performClick()
-        rule.onNodeWithTag("settingsStepGoal").assertTextContains("8.500", substring = true)
-        rule.onNodeWithTag("stepsCount").assertTextContains("8.500", substring = true)
+        rule.onNodeWithTag("settingsStepGoal").assertTextContains("10.500", substring = true)
+        rule.onNodeWithTag("stepsCount").assertTextContains("10.500", substring = true)
         repeat(2) { rule.onNodeWithTag("stepGoalDown").performClick() }
-        rule.onNodeWithTag("stepsCount").assertTextContains("7.500", substring = true)
+        rule.onNodeWithTag("stepsCount").assertTextContains("9.500", substring = true)
         rule.onNodeWithTag("stepGoalUp").assertHeightIsAtLeast(DarkIOSize.TouchTarget).assertWidthIsAtLeast(DarkIOSize.TouchTarget)
-        repeat(14) { rule.onNodeWithTag("stepGoalDown").performClick() }
+        repeat(18) { rule.onNodeWithTag("stepGoalDown").performClick() }
         rule.onNodeWithTag("settingsStepGoal").assertTextContains("1.000", substring = true)
     }
 

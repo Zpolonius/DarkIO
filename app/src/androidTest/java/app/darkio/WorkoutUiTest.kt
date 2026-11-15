@@ -120,7 +120,7 @@ class WorkoutUiTest {
     }
 
     @Test
-    fun workoutCardShowsWeekOverviewAndStreak() {
+    fun workoutCardShowsStreakAndSwitchesCompletion() {
         val tuesday = LocalDate.of(2026, 11, 17) // Tuesday
         val fakeDao = FakeWorkoutDao(
             data = mutableMapOf(
@@ -138,12 +138,6 @@ class WorkoutUiTest {
             WorkoutCard(dao = fakeDao, now = { tuesday })
         }
 
-        // Ugeoversigten vises med de 7 dage
-        rule.onNodeWithTag("workoutWeek").assertIsDisplayed()
-        listOf("man", "tir", "ons", "tor", "fre", "lør", "søn").forEach {
-            rule.onNodeWithText(it).assertIsDisplayed()
-        }
-
         // 2 pas i træk før tirsdagens pas er gennemført
         rule.onNodeWithText("2 pas i træk").assertIsDisplayed()
 
@@ -154,6 +148,21 @@ class WorkoutUiTest {
         // Nu er stimen 3 pas i træk
         rule.onNodeWithText("3 pas i træk").assertIsDisplayed()
         rule.onNodeWithText("gennemført").assertIsDisplayed()
+    }
+
+    @Test
+    fun workoutCardInvokesOnCompletedChangedWhenToggled() {
+        val tuesday = LocalDate.of(2026, 11, 17)
+        val fakeDao = FakeWorkoutDao(
+            mutableMapOf(2 to WorkoutDay(2, "tirsdag: spinning", "spinning")),
+        )
+        var changed = false
+        rule.setContent {
+            WorkoutCard(dao = fakeDao, now = { tuesday }, onCompletedChanged = { changed = true })
+        }
+        rule.onNodeWithText("markér som gennemført").performClick()
+        rule.waitForIdle()
+        assertTrue(changed)
     }
 
     private val tuesday = LocalDate.of(2026, 11, 17)
@@ -179,7 +188,7 @@ class WorkoutUiTest {
         assertEquals(listOf(1, 2), fakeDao.data.keys.sorted())
         assertEquals("mandag: løb", fakeDao.data[1]?.title)
         assertEquals(8, fakeDao.data[1]?.rpe)
-        rule.onNodeWithTag("workoutDay_1").assertIsDisplayed()
+        rule.onNodeWithText("tirsdag: spinning · RPE 7").assertIsDisplayed()
     }
 
     @Test

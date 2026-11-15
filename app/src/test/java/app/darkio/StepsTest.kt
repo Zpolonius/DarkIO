@@ -20,10 +20,10 @@ class StepsTest {
     private val zone = ZoneId.of("UTC")
 
     @Test
-    fun defaultGoalIs8000() {
-        assertEquals(8_000L, DEFAULT_STEP_GOAL)
+    fun defaultGoalIs10000() {
+        assertEquals(10_000L, DEFAULT_STEP_GOAL)
         val data = StepsData(steps = 1_234L)
-        assertEquals(8_000L, data.goal)
+        assertEquals(10_000L, data.goal)
         assertEquals(1_234L, data.steps)
     }
 

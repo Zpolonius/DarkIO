@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
@@ -45,7 +46,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-const val DEFAULT_STEP_GOAL = 8_000L
+const val DEFAULT_STEP_GOAL = 10_000L
 
 data class StepsData(
     val steps: Long,
@@ -139,6 +140,7 @@ fun StepsCard(
     hasPermission: (suspend () -> Boolean)? = null,
     onGrantAccess: (() -> Unit)? = null,
     goal: Long = DEFAULT_STEP_GOAL,
+    verticalPadding: Dp = DarkIOSpace.S4,
     now: () -> Instant = Instant::now,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ) {
@@ -176,6 +178,7 @@ fun StepsCard(
             )
         },
         modifier = modifier,
+        verticalPadding = verticalPadding,
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
         reloadTrigger = permissionAttempt to goal,
         onGrantAccess = actualOnGrantAccess,
