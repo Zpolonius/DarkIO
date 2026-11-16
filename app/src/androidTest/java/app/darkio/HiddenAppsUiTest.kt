@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.data.AppEntry
 import app.darkio.data.splitApps
@@ -46,9 +48,15 @@ class HiddenAppsUiTest {
         )
     }
 
+    /** Skjulte apps åbnes fra Indstillinger (langt tryk på tom flade), ikke fra skuffen. */
     private fun openHiddenScreen() {
-        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
+        rule.onNodeWithTag("homePager").performTouchInput { longClick(Offset(10.dp.toPx(), height / 2f)) }
         rule.onNodeWithText(hiddenTitle).performClick()
+    }
+
+    private fun back() {
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        rule.waitForIdle()
     }
 
     @Test
@@ -92,8 +100,10 @@ class HiddenAppsUiTest {
         openHiddenScreen()
         rule.onNodeWithText(showAgain).performClick()
         rule.onNodeWithText(context.getString(R.string.hidden_apps_empty)).assertIsDisplayed()
-        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-        rule.waitForIdle()
+        // Tilbage til Indstillinger, tilbage til hjem, og åbn skuffen.
+        back()
+        back()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
         rule.onNodeWithText("Bravo").assertIsDisplayed()
     }
 }

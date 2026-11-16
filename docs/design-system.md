@@ -6,7 +6,7 @@ DarkIO er en personlig launcher til en Pixel 10 (Android 16). Designsystemet her
 
 ## Principper
 
-1. **Kig øverst, tryk nederst.** Øverste halvdel af skærmen er kun til at kigge på: ur, dashboard-kort, overskrifter. Alt du trykker på dagligt (favoritter, søgning, kategorier, menuer, tilbage) ligger i nederste halvdel. Lister tyngdes mod bunden, og bedste søgeresultat står tættest på feltet.
+1. **Kig øverst, tryk nederst.** Øverste halvdel af skærmen er kun til at kigge på: ur, dashboard-kort, overskrifter. Alt du trykker på dagligt (favoritter, søgning, kategorier, menuer, tilbage) ligger i nederste halvdel. Lister tyngdes mod bunden, og bedste søgeresultat står tættest på feltet. App-skuffen er undtagelsen: den fylder op til 70 % af skærmen (`drawer-max-fraction`), så der er plads til mindst fire rækker, men søgefelt og kategori-bar bliver i bunden, og skuffen krymper til indholdet.
 2. **Én accent ad gangen.** `accent` (lime) markerer det ene, der er valgt eller aktivt i en zone: den valgte kategori, markøren, timen lige nu. To lime-ting i samme zone konkurrerer.
 3. **Pastel er til ikoner, ikke til flader.** De fem `pastel-*` farver bruges kun i ikonfelter og små chips med en `bg`-farvet glyf ovenpå. Kort og felter er altid `surface` med `line`-ramme.
 4. **Mono er maskinens stemme.** JetBrains Mono bruges til alt, telefonen fortæller dig: labels, tal, stier, kommandoer. Space Grotesk bruges til det, du læser som indhold: ur, overskrifter, app- og aftalenavne.

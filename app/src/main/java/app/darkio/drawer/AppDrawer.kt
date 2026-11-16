@@ -2,7 +2,6 @@ package app.darkio.drawer
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -57,13 +55,12 @@ import app.darkio.ui.theme.DarkIOType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** App-skuffe: 4-kolonners gitter, søgning og kategori-bar, bundforankret. [onDismiss] kaldes ved swipe ned, [onMenu] ved langt tryk på en app. */
+/** App-skuffe: 4-kolonners gitter, søgning og kategori-bar, bundforankret. Gitteret scroller i hele sin højde og krymper til indholdet. [onDismiss] kaldes ved swipe ned, [onMenu] ved langt tryk på en app. */
 @Composable
 fun AppDrawer(
     apps: List<AppEntry>,
     onLaunch: (AppEntry) -> Unit,
     onMenu: (AppEntry) -> Unit,
-    onShowHidden: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -123,15 +120,6 @@ fun AppDrawer(
             onSearch = { results.firstOrNull()?.let(onLaunch) },
             modifier = Modifier.padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
         )
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = DarkIOSize.TouchMin)
-                .clickable(role = Role.Button, onClick = onShowHidden),
-            contentAlignment = Alignment.Center,
-        ) {
-            BasicText(stringResource(R.string.hidden_apps_title), style = DarkIOType.Button.copy(color = DarkIOColors.InkSoft))
-        }
         Box(
             Modifier
                 .fillMaxWidth()

@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -20,6 +21,7 @@ import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
 import app.darkio.home.HomeScreen
+import app.darkio.ui.theme.DarkIOSize
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -32,18 +34,21 @@ class DrawerUiTest {
     private val hint = context.getString(R.string.hint_swipe_up)
     private val apps = (1..200).map { AppEntry("id$it", "App %03d".format(it)) }
 
-    private fun show(hintSeen: Boolean = true) = rule.setContent {
+    private fun show(hintSeen: Boolean = true, apps: List<AppEntry> = this.apps) = rule.setContent {
         HomeScreen(apps = AppLists(apps, emptyList()), hintSeen = hintSeen, onHintSeen = {}, onLaunch = {}, onSetHidden = { _, _ -> }, onSetFavorites = {}, onSetCategory = { _, _ -> }, onAppInfo = {}, onUninstall = {})
     }
 
-    /** Alle trykbare elementer skal ligge under skærmens midte. */
+    /** Kategori-baren ligger under skærmens midte (F15), og alt trykbart holder sig inden for skuffens andel af skærmen (F7). */
     private fun assertClickablesBelowMiddle() {
-        val middle = rule.onRoot().fetchSemanticsNode().boundsInRoot.center.y
+        val root = rule.onRoot().fetchSemanticsNode().boundsInRoot
+        val categoryBar = rule.onNodeWithTag("categoryBar").fetchSemanticsNode().boundsInRoot
+        assertTrue("kategori-baren ligger over midten: $categoryBar", categoryBar.top >= root.center.y)
+        val middle = root.height * (1f - DarkIOSize.DrawerMaxFraction) - 1f
         // Prefetchede gitter-celler er komponeret men ikke placeret (størrelse 0); de er ikke synlige.
         val clickables = rule.onAllNodes(hasClickAction()).fetchSemanticsNodes()
             .filter { it.boundsInRoot.width > 0f && it.boundsInRoot.height > 0f }
         assertTrue("ingen trykbare elementer fundet", clickables.isNotEmpty())
-        clickables.forEach { assertTrue("trykbar ligger over midten: ${it.boundsInRoot}", it.boundsInRoot.top >= middle) }
+        clickables.forEach { assertTrue("trykbar ligger over skuffens top: ${it.boundsInRoot}", it.boundsInRoot.top >= middle) }
     }
 
     @Test
@@ -56,7 +61,33 @@ class DrawerUiTest {
 
         rule.onNodeWithTag("drawerGrid").performScrollToIndex(199)
         rule.onNodeWithText("App 200").assertIsDisplayed()
+        // Scroll i gitteret lukker ikke skuffen; kun grebet gør.
+        rule.onNodeWithTag("drawerGrip").assertIsDisplayed()
         assertClickablesBelowMiddle()
+    }
+
+    @Test
+    fun drawerShowsAtLeastFourRowsAndNoHiddenAppsLink() {
+        show()
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
+        val rows = rule.onAllNodes(hasText("App ", substring = true)).fetchSemanticsNodes()
+            .filter { it.boundsInRoot.width > 0f && it.boundsInRoot.height > 0f }
+            .map { it.boundsInRoot.top.toInt() }.distinct()
+        assertTrue("kun ${rows.size} rækker synlige", rows.size >= 4)
+        rule.onNodeWithText(context.getString(R.string.hidden_apps_title)).assertDoesNotExist()
+    }
+
+    @Test
+    fun drawerShrinksToContentWithFewApps() {
+        show(apps = apps.take(3))
+        rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
+        val root = rule.onRoot().fetchSemanticsNode().boundsInRoot
+        val grip = rule.onNodeWithTag("drawerGrip").fetchSemanticsNode().boundsInRoot
+        val categoryBar = rule.onNodeWithTag("categoryBar").fetchSemanticsNode().boundsInRoot
+        // Én række apps: skuffen fylder mindre end halvdelen og står stadig i bunden.
+        assertTrue("skuffen krymper ikke: $grip", grip.top > root.center.y)
+        assertTrue("skuffen står ikke i bunden: $categoryBar", categoryBar.bottom > root.height * 0.9f)
+        rule.onNodeWithText("App 003").assertIsDisplayed()
     }
 
     @Test

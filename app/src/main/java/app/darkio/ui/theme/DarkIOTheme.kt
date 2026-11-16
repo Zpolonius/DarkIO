@@ -80,6 +80,8 @@ object DarkIOSize {
     val IconTileSm = 44.dp
     val CardChip = 40.dp
     val FieldHeight = 56.dp
+    /** Skuffens største højde som andel af skærmen (F7). */
+    const val DrawerMaxFraction = 0.7f
     val GripWidth = 40.dp
     val GripHeight = 4.dp
     val GlyphStroke = 1.9.dp
