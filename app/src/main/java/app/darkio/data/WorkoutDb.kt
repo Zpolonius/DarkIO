@@ -9,6 +9,8 @@ import androidx.room.Transaction
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import java.time.LocalDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Træningspas for en ugedag (1=mandag ... 7=søndag). */
 @Entity(tableName = "workout_day")
@@ -84,6 +86,21 @@ abstract class WorkoutDao {
         } else {
             deleteCompleted(dateStr)
         }
+    }
+}
+
+/**
+ * Tjekker om en given dato [date] har gennemført træning (F4, F24).
+ */
+suspend fun isWorkoutCompletedOn(dao: WorkoutDao, date: LocalDate): Boolean = withContext(Dispatchers.IO) {
+    try {
+        val dow = date.dayOfWeek.value
+        val allWorkouts = dao.getAllWorkouts()
+        val todayWorkout = allWorkouts.firstOrNull { it.dayOfWeek == dow } ?: dao.getWorkoutForDay(dow)
+        val completedDates = dao.getCompletedDates().mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()
+        date in completedDates || todayWorkout?.completedDate == date.toString()
+    } catch (_: Throwable) {
+        false
     }
 }
 

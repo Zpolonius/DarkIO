@@ -196,4 +196,64 @@ class BedtimeTest {
         // Kun begivenheder i dag
         assertNull(selectFirstEventTomorrow(listOf(eventToday), now))
     }
+
+    @Test
+    fun selectFirstEventTomorrowPrioritizesTimedOverAllDay() {
+        val now = ZonedDateTime.of(2026, 11, 16, 22, 0, 0, 0, zone) // Monday 22:00
+        val tomorrow = now.toLocalDate().plusDays(1) // Tuesday 2026-11-17
+
+        val allDayEvent = CalendarEvent(
+            title = "Heldagsbegivenhed",
+            startMillis = tomorrow.atStartOfDay(zone).toInstant().toEpochMilli(),
+            endMillis = tomorrow.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(),
+            allDay = true,
+        )
+        val timedEvent = CalendarEvent(
+            title = "Tidlig kaffe",
+            startMillis = tomorrow.atTime(10, 0).atZone(zone).toInstant().toEpochMilli(),
+            endMillis = tomorrow.atTime(10, 30).atZone(zone).toInstant().toEpochMilli(),
+            allDay = false,
+        )
+
+        // Tidsfæstet aftale skal vælges før heldagsaftale
+        val selected = selectFirstEventTomorrow(listOf(allDayEvent, timedEvent), now)
+        assertEquals("Tidlig kaffe", selected?.title)
+        assertFalse(selected?.allDay ?: true)
+
+        // Hvis der kun er heldagsaftaler i morgen, vælges den
+        val selectedAllDay = selectFirstEventTomorrow(listOf(allDayEvent), now)
+        assertEquals("Heldagsbegivenhed", selectedAllDay?.title)
+        assertTrue(selectedAllDay?.allDay ?: false)
+    }
+
+    @Test
+    fun selectFirstEventTomorrowMidnightCrossingEvents() {
+        val now = ZonedDateTime.of(2026, 11, 16, 22, 0, 0, 0, zone) // Monday 22:00
+        val tomorrow = now.toLocalDate().plusDays(1) // Tuesday 2026-11-17
+
+        // Aftale der starter mandag 23:30 og slutter tirsdag 01:30 (krydser midnat ind i i morgen)
+        val crossingFromToday = CalendarEvent(
+            title = "Natvagt",
+            startMillis = now.toLocalDate().atTime(23, 30).atZone(zone).toInstant().toEpochMilli(),
+            endMillis = tomorrow.atTime(1, 30).atZone(zone).toInstant().toEpochMilli(),
+        )
+        val tuesdayMorning = CalendarEvent(
+            title = "Formiddagsmøde",
+            startMillis = tomorrow.atTime(10, 0).atZone(zone).toInstant().toEpochMilli(),
+            endMillis = tomorrow.atTime(11, 0).atZone(zone).toInstant().toEpochMilli(),
+        )
+
+        // Aftale der krydser midnat ind i i morgen overlapper med i morgen og vælges hvis den starter først
+        val selectedCrossing = selectFirstEventTomorrow(listOf(tuesdayMorning, crossingFromToday), now)
+        assertEquals("Natvagt", selectedCrossing?.title)
+
+        // Aftale der starter tirsdag 23:00 og slutter onsdag 02:00 (krydser midnat ud af i morgen)
+        val crossingToNextDay = CalendarEvent(
+            title = "Sen koncert",
+            startMillis = tomorrow.atTime(23, 0).atZone(zone).toInstant().toEpochMilli(),
+            endMillis = tomorrow.plusDays(1).atTime(2, 0).atZone(zone).toInstant().toEpochMilli(),
+        )
+        val selectedTomorrowNight = selectFirstEventTomorrow(listOf(crossingToNextDay), now)
+        assertEquals("Sen koncert", selectedTomorrowNight?.title)
+    }
 }

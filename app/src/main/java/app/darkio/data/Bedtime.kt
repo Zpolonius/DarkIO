@@ -1,17 +1,13 @@
 package app.darkio.data
 
-import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationManager
-import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.provider.CalendarContract
 import android.provider.Settings as AndroidSettings
-import androidx.core.content.ContextCompat
 import app.darkio.dashboard.CalendarEvent
 import app.darkio.dashboard.checkStepsPermission
+import app.darkio.dashboard.queryCalendarEvents
 import app.darkio.dashboard.queryHealthConnectSteps
 import java.time.Instant
 import java.time.LocalDate
@@ -147,79 +143,12 @@ fun selectFirstEventTomorrow(
 suspend fun queryFirstEventTomorrow(
     context: Context,
     now: ZonedDateTime = ZonedDateTime.now(),
-): CalendarEvent? = withContext(Dispatchers.IO) {
-    val hasPermission = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.READ_CALENDAR,
-    ) == PackageManager.PERMISSION_GRANTED
-    if (!hasPermission) return@withContext null
-
+): CalendarEvent? {
     val tomorrow = now.toLocalDate().plusDays(1)
     val startWindow = tomorrow.atStartOfDay(now.zone).toInstant().toEpochMilli()
     val endWindow = tomorrow.plusDays(1).atStartOfDay(now.zone).toInstant().toEpochMilli()
-
-    val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
-    ContentUris.appendId(builder, startWindow)
-    ContentUris.appendId(builder, endWindow)
-    val uri = builder.build()
-
-    val projection = arrayOf(
-        CalendarContract.Instances.TITLE,
-        CalendarContract.Instances.BEGIN,
-        CalendarContract.Instances.END,
-        CalendarContract.Instances.ALL_DAY,
-        CalendarContract.Instances.CALENDAR_ID,
-    )
-
-    val events = mutableListOf<CalendarEvent>()
-    try {
-        context.contentResolver.query(
-            uri,
-            projection,
-            null,
-            null,
-            "${CalendarContract.Instances.BEGIN} ASC",
-        )?.use { cursor ->
-            val titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE)
-            val beginIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN)
-            val endIdx = cursor.getColumnIndex(CalendarContract.Instances.END)
-            val allDayIdx = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY)
-            val calIdIdx = cursor.getColumnIndex(CalendarContract.Instances.CALENDAR_ID)
-
-            while (cursor.moveToNext()) {
-                val title = if (titleIdx >= 0) cursor.getString(titleIdx).orEmpty() else ""
-                val begin = if (beginIdx >= 0) cursor.getLong(beginIdx) else 0L
-                val end = if (endIdx >= 0) cursor.getLong(endIdx) else begin
-                val allDay = if (allDayIdx >= 0) cursor.getInt(allDayIdx) == 1 else false
-                val calendarId = if (calIdIdx >= 0) cursor.getLong(calIdIdx) else 0L
-                events.add(CalendarEvent(title = title, startMillis = begin, endMillis = end, allDay = allDay, calendarId = calendarId))
-            }
-        }
-    } catch (_: SecurityException) {
-        return@withContext null
-    } catch (_: Throwable) {
-        return@withContext null
-    }
-
-    events.minWithOrNull(compareBy({ it.allDay }, { it.startMillis }, { it.endMillis }))
-}
-
-/**
- * Tjekker om dagens træning er gennemført.
- */
-suspend fun queryIsWorkoutCompletedToday(
-    dao: WorkoutDao,
-    today: LocalDate = LocalDate.now(),
-): Boolean = withContext(Dispatchers.IO) {
-    try {
-        val dow = today.dayOfWeek.value
-        val allWorkouts = dao.getAllWorkouts()
-        val todayWorkout = allWorkouts.firstOrNull { it.dayOfWeek == dow } ?: dao.getWorkoutForDay(dow)
-        val completedDates = dao.getCompletedDates().mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()
-        today in completedDates || todayWorkout?.completedDate == today.toString()
-    } catch (_: Throwable) {
-        false
-    }
+    val events = queryCalendarEvents(context, startWindow, endWindow)
+    return selectFirstEventTomorrow(events, now)
 }
 
 /**
@@ -244,7 +173,7 @@ suspend fun queryBedtimeSummary(
     }
 
     val dao = workoutDao ?: AppDatabase.open(context).workouts()
-    val workoutCompleted = queryIsWorkoutCompletedToday(dao, now.toLocalDate())
+    val workoutCompleted = isWorkoutCompletedOn(dao, now.toLocalDate())
 
     BedtimeSummary(
         alarmTriggerMillis = alarmMillis,

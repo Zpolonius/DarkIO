@@ -29,6 +29,7 @@ import app.darkio.data.AppDatabase
 import app.darkio.data.WorkoutDao
 import app.darkio.data.WorkoutDay
 import app.darkio.data.calculateWorkoutStreak
+import app.darkio.data.isWorkoutCompletedOn
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOSize
 import app.darkio.ui.theme.DarkIOSpace
@@ -65,7 +66,7 @@ fun WorkoutCard(
             val todayWorkout = allWorkouts.firstOrNull { it.dayOfWeek == dow } ?: dao.getWorkoutForDay(dow)
             val trainingDays = allWorkouts.map { it.dayOfWeek }.toSet()
             val completedDates = dao.getCompletedDates().mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()
-            val isCompleted = today in completedDates || todayWorkout?.completedDate == today.toString()
+            val isCompleted = isWorkoutCompletedOn(dao, today)
             val streak = calculateWorkoutStreak(trainingDays, completedDates, today)
             CardState.Content(WorkoutCardData(todayWorkout, isCompleted, streak, today))
         },

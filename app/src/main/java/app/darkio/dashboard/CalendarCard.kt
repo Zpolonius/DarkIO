@@ -136,18 +136,15 @@ fun formatEventTime(
     }
 }
 
-/** Henter kalenderbegivenheder de næste 24 timer uden for main-tråden (Dispatchers.IO). Gemmer intet (N5). */
+/** Henter kalenderbegivenheder i et tidsinterval uden for main-tråden (Dispatchers.IO). Gemmer intet (N5). */
 suspend fun queryCalendarEvents(
     context: Context,
-    nowMillis: Long = System.currentTimeMillis(),
+    startMillis: Long = System.currentTimeMillis(),
+    endMillis: Long = startMillis + 24 * 60 * 60 * 1000L,
 ): List<CalendarEvent> = withContext(Dispatchers.IO) {
-    val windowMillis = 24 * 60 * 60 * 1000L
-    val startWindow = nowMillis
-    val endWindow = nowMillis + windowMillis
-
     val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
-    ContentUris.appendId(builder, startWindow)
-    ContentUris.appendId(builder, endWindow)
+    ContentUris.appendId(builder, startMillis)
+    ContentUris.appendId(builder, endMillis)
     val uri = builder.build()
 
     val projection = arrayOf(

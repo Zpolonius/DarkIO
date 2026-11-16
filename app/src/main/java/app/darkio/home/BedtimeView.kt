@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import app.darkio.R
 import app.darkio.dashboard.formatDate
 import app.darkio.dashboard.formatEventTime
@@ -108,7 +111,10 @@ fun BedtimeView(
                 )
             } else {
                 BasicText(
-                    stringResource(R.string.bedtime_free_tomorrow),
+                    buildAnnotatedString {
+                        append(stringResource(R.string.bedtime_free_tomorrow))
+                        withStyle(SpanStyle(color = DarkIOColors.Accent)) { append("_") }
+                    },
                     style = DarkIOType.Item.copy(color = DarkIOColors.InkMuted),
                     modifier = Modifier.testTag("bedtimeCalendar"),
                 )

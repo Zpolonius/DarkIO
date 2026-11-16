@@ -356,16 +356,16 @@ fun HomeScreen(
                         }
                     }
                     if (query.isBlank() && p != 2) {
-                        if (p == 0 && isBedtime) {
-                            Column(
-                                Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(horizontal = DarkIOSpace.S5)
-                                    .padding(bottom = bottomHeight)
-                                    .onSizeChanged { shortcutsHeight = with(density) { it.height.toDp() } },
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
-                            ) {
+                        Column(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(horizontal = DarkIOSpace.S5)
+                                .padding(bottom = bottomHeight)
+                                .onSizeChanged { shortcutsHeight = with(density) { it.height.toDp() } },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
+                        ) {
+                            if (p == 0 && isBedtime) {
                                 Box(
                                     modifier = Modifier
                                         .testTag("bedtimeSettingsButton")
@@ -387,17 +387,7 @@ fun HomeScreen(
                                         style = DarkIOType.Button.copy(color = DarkIOColors.Ink),
                                     )
                                 }
-                            }
-                        } else {
-                            Column(
-                                Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(horizontal = DarkIOSpace.S5)
-                                    .padding(bottom = bottomHeight)
-                                    .onSizeChanged { shortcutsHeight = with(density) { it.height.toDp() } },
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
-                            ) {
+                            } else {
                                 if (p == 0 && isWorkHours) {
                                     Box(
                                         modifier = Modifier

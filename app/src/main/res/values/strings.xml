@@ -39,7 +39,7 @@
     <string name="bedtime_end_up_desc">Sæt sengetid slut 30 minutter frem</string>
     <string name="bedtime_settings_button">Sengetid-indstillinger</string>
     <string name="bedtime_no_alarm">intet vækkeur</string>
-    <string name="bedtime_free_tomorrow">fri i morgen_</string>
+    <string name="bedtime_free_tomorrow">fri i morgen</string>
     <string name="bedtime_steps">%1$s skridt</string>
     <string name="bedtime_no_steps">ingen skridt</string>
     <string name="bedtime_workout_completed">træning gennemført</string>
