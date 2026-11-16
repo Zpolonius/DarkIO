@@ -46,6 +46,7 @@ import androidx.core.graphics.drawable.toBitmap
 import app.darkio.R
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
+import app.darkio.data.AppIconCache
 import app.darkio.ui.onVerticalSwipe
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOShapes
@@ -154,17 +155,42 @@ private fun AppTile(app: AppEntry, onClick: () -> Unit, onLongClick: () -> Unit)
     }
 }
 
-/** Ikonet hentes uden for main-tråden; falske apps (uden info) får et tomt felt. */
+/** Ikonet hentes uden for main-tråden; læser synkront fra cachen som initial værdi før evt. fallback på IO. */
 @Composable
-internal fun AppIcon(app: AppEntry, size: Dp = DarkIOSize.IconTile) {
+internal fun AppIcon(
+    app: AppEntry,
+    size: Dp = DarkIOSize.IconTile,
+    cache: AppIconCache = AppIconCache,
+    loader: (AppEntry, Int, Int) -> ImageBitmap? = ::loadAppIcon,
+) {
     val px = with(LocalDensity.current) { size.roundToPx() }
     val dpi = LocalConfiguration.current.densityDpi
-    val icon by produceState<ImageBitmap?>(null, app.id) {
-        value = withContext(Dispatchers.IO) {
-            app.info?.getIcon(dpi)?.toBitmap(px, px)?.asImageBitmap()
+    val cached = remember(app.id, px) { cache.get(app.id, px) }
+    val icon by produceState(cached, app.id, px) {
+        value = cached ?: withContext(Dispatchers.IO) {
+            loader(app, px, dpi)?.also { cache.put(app.id, px, it) }
         }
     }
-    Box(Modifier.size(size).clip(DarkIOShapes.Lg).background(DarkIOColors.Surface)) {
-        icon?.let { Image(it, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+    Box(
+        Modifier
+            .size(size)
+            .clip(DarkIOShapes.Lg)
+            .background(DarkIOColors.Surface)
+            .testTag("appIcon:${app.id}"),
+    ) {
+        icon?.let {
+            Image(
+                it,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("appIconBitmap:${app.id}"),
+                contentScale = ContentScale.Crop,
+            )
+        }
     }
+}
+
+internal fun loadAppIcon(app: AppEntry, px: Int, dpi: Int): ImageBitmap? {
+    return app.info?.getIcon(dpi)?.toBitmap(px, px)?.asImageBitmap()
 }
