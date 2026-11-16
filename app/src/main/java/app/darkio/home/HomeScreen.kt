@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -68,12 +69,17 @@ import app.darkio.dashboard.BuildPage
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
+import app.darkio.data.BedtimeSummary
 import app.darkio.data.HomeCard
 import app.darkio.data.Settings
 import app.darkio.data.WORK_SHORTCUTS_PAGE
 import app.darkio.data.dockSlots
 import app.darkio.data.firstFreeSlot
+import app.darkio.data.getInterruptionFilter
+import app.darkio.data.isBedtimeMode
 import app.darkio.data.isWorkHours
+import app.darkio.data.openBedtimeSettings
+import app.darkio.data.queryBedtimeSummary
 import app.darkio.data.reorderedSlots
 import java.time.ZonedDateTime
 import androidx.lifecycle.Lifecycle
@@ -121,7 +127,11 @@ fun HomeScreen(
     onFyraftenZenRule: (Boolean) -> Unit = {},
     calendarTestEvents: List<CalendarEvent>? = null,
     calendarsOverride: List<DeviceCalendar>? = null,
+    interruptionFilterProvider: (() -> Int)? = null,
+    bedtimeDataOverride: BedtimeSummary? = null,
+    onOpenBedtimeSettings: (() -> Unit)? = null,
 ) {
+    val context = LocalContext.current
     var resumeTick by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME, lifecycleOwner) {
@@ -129,6 +139,21 @@ fun HomeScreen(
     }
     val now = remember(nowProvider, resumeTick) { nowProvider() }
     val isWorkHours = remember(settings, now) { isWorkHours(settings, now) }
+    val actualFilterProvider = remember(interruptionFilterProvider, context) {
+        interruptionFilterProvider ?: { getInterruptionFilter(context) }
+    }
+    val interruptionFilter = remember(actualFilterProvider, resumeTick) { actualFilterProvider() }
+    val isBedtime = remember(interruptionFilter, settings, now) { isBedtimeMode(interruptionFilter, settings, now) }
+
+    var bedtimeSummary by remember { mutableStateOf<BedtimeSummary?>(bedtimeDataOverride) }
+    LaunchedEffect(resumeTick, isBedtime, bedtimeDataOverride) {
+        if (bedtimeDataOverride != null) {
+            bedtimeSummary = bedtimeDataOverride
+        } else if (isBedtime) {
+            bedtimeSummary = queryBedtimeSummary(context, now)
+        }
+    }
+    val effectiveBedtimeData = bedtimeDataOverride ?: bedtimeSummary ?: BedtimeSummary()
 
     val pageLabels = listOf(R.string.page_today, R.string.page_training, R.string.page_build).map { stringResource(it) }
     val pager = rememberPagerState { pageLabels.size }
@@ -240,24 +265,35 @@ fun HomeScreen(
                     Box(Modifier.fillMaxSize().pointerInput(canOpenSettings) { detectTapGestures(onLongPress = { if (canOpenSettings) settingsOpen = true }) })
                     Box(Modifier.fillMaxSize().padding(bottom = pageBottomPadding), contentAlignment = Alignment.Center) {
                         if (p == 0) {
-                            Column(
-                                Modifier
-                                    .align(Alignment.TopCenter)
-                                    .fillMaxWidth()
-                                    .padding(horizontal = DarkIOSpace.S5)
-                                    .padding(top = DarkIOSpace.TopInset),
-                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
-                            ) {
-                                if (HomeCard.Clock in settings.cards) ClockCard(Modifier.testTag("card_Clock"))
-                                if (HomeCard.Calendar in settings.cards) CalendarCard(
-                                    modifier = Modifier.testTag("card_Calendar"),
-                                    isWorkHours = isWorkHours,
-                                    workCalendarIds = settings.workCalendarIds,
-                                    testEvents = calendarTestEvents,
-                                    nowMillis = { now.toInstant().toEpochMilli() },
+                            if (isBedtime) {
+                                BedtimeView(
+                                    summary = effectiveBedtimeData,
+                                    now = now,
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(horizontal = DarkIOSpace.S5)
+                                        .padding(top = DarkIOSpace.TopInset),
                                 )
-                                if (HomeCard.Focus in settings.cards) FocusCard()
-                                if (HomeCard.Tip in settings.cards) TipCard(Modifier.testTag("card_Tip"))
+                            } else {
+                                Column(
+                                    Modifier
+                                        .align(Alignment.TopCenter)
+                                        .fillMaxWidth()
+                                        .padding(horizontal = DarkIOSpace.S5)
+                                        .padding(top = DarkIOSpace.TopInset),
+                                    verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
+                                ) {
+                                    if (HomeCard.Clock in settings.cards) ClockCard(Modifier.testTag("card_Clock"))
+                                    if (HomeCard.Calendar in settings.cards) CalendarCard(
+                                        modifier = Modifier.testTag("card_Calendar"),
+                                        isWorkHours = isWorkHours,
+                                        workCalendarIds = settings.workCalendarIds,
+                                        testEvents = calendarTestEvents,
+                                        nowMillis = { now.toInstant().toEpochMilli() },
+                                    )
+                                    if (HomeCard.Focus in settings.cards) FocusCard()
+                                    if (HomeCard.Tip in settings.cards) TipCard(Modifier.testTag("card_Tip"))
+                                }
                             }
                         } else if (p == 1) {
                             Column(
@@ -306,7 +342,7 @@ fun HomeScreen(
                                 style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft),
                                 modifier = Modifier.testTag("page$p").clip(DarkIOShapes.Pill).background(DarkIOColors.SurfaceGlass).padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
                             )
-                            if (p == 0 && isWorkHours) {
+                            if (p == 0 && isWorkHours && !isBedtime) {
                                 BasicText(
                                     stringResource(R.string.work_hours_badge),
                                     style = DarkIOType.Data.copy(color = DarkIOColors.Accent),
@@ -320,45 +356,79 @@ fun HomeScreen(
                         }
                     }
                     if (query.isBlank() && p != 2) {
-                        Column(
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(horizontal = DarkIOSpace.S5)
-                                .padding(bottom = bottomHeight)
-                                .onSizeChanged { shortcutsHeight = with(density) { it.height.toDp() } },
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
-                        ) {
-                            if (p == 0 && isWorkHours) {
+                        if (p == 0 && isBedtime) {
+                            Column(
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(horizontal = DarkIOSpace.S5)
+                                    .padding(bottom = bottomHeight)
+                                    .onSizeChanged { shortcutsHeight = with(density) { it.height.toDp() } },
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
+                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .testTag("fyraftenButton")
+                                        .testTag("bedtimeSettingsButton")
                                         .heightIn(min = DarkIOSize.TouchMin)
                                         .clip(DarkIOShapes.Pill)
                                         .background(DarkIOColors.SurfaceGlass)
                                         .clickable(role = Role.Button) {
-                                            onSettingsChange { it.copy(workEndOverrideDate = now.toLocalDate()) }
-                                            onFyraftenZenRule(true)
+                                            if (onOpenBedtimeSettings != null) {
+                                                onOpenBedtimeSettings()
+                                            } else {
+                                                openBedtimeSettings(context)
+                                            }
                                         }
                                         .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     BasicText(
-                                        stringResource(R.string.work_fyraften_button),
+                                        stringResource(R.string.bedtime_settings_button),
                                         style = DarkIOType.Button.copy(color = DarkIOColors.Ink),
                                     )
                                 }
                             }
-                            Dock(
-                                shown,
-                                onLaunch,
-                                onMenu = { menuAppId = it.id },
-                                onMove = { from, to -> onSetShortcuts(effectivePage, reorderedSlots(shown, from, to, apps.hidden.mapNotNull { slots[it.id] }.toSet()).map { (id, slot) -> shown.filterNotNull().first { it.id == id } to slot }) },
-                                tag = "shortcuts",
-                                emptyLabel = R.string.shortcut_empty_slot,
-                                label = R.string.shortcuts_label,
-                                dragAfterLongPress = true,
-                            )
+                        } else {
+                            Column(
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(horizontal = DarkIOSpace.S5)
+                                    .padding(bottom = bottomHeight)
+                                    .onSizeChanged { shortcutsHeight = with(density) { it.height.toDp() } },
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
+                            ) {
+                                if (p == 0 && isWorkHours) {
+                                    Box(
+                                        modifier = Modifier
+                                            .testTag("fyraftenButton")
+                                            .heightIn(min = DarkIOSize.TouchMin)
+                                            .clip(DarkIOShapes.Pill)
+                                            .background(DarkIOColors.SurfaceGlass)
+                                            .clickable(role = Role.Button) {
+                                                onSettingsChange { it.copy(workEndOverrideDate = now.toLocalDate()) }
+                                                onFyraftenZenRule(true)
+                                            }
+                                            .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        BasicText(
+                                            stringResource(R.string.work_fyraften_button),
+                                            style = DarkIOType.Button.copy(color = DarkIOColors.Ink),
+                                        )
+                                    }
+                                }
+                                Dock(
+                                    shown,
+                                    onLaunch,
+                                    onMenu = { menuAppId = it.id },
+                                    onMove = { from, to -> onSetShortcuts(effectivePage, reorderedSlots(shown, from, to, apps.hidden.mapNotNull { slots[it.id] }.toSet()).map { (id, slot) -> shown.filterNotNull().first { it.id == id } to slot }) },
+                                    tag = "shortcuts",
+                                    emptyLabel = R.string.shortcut_empty_slot,
+                                    label = R.string.shortcuts_label,
+                                    dragAfterLongPress = true,
+                                )
+                            }
                         }
                     }
                 }
@@ -399,7 +469,7 @@ fun HomeScreen(
                         onMove = { from, to -> onSetFavorites(reorderedSlots(dock, from, to, apps.hidden.mapNotNull { apps.favoriteSlots[it.id] }.toSet()).map { (id, slot) -> dock.filterNotNull().first { it.id == id } to slot }) },
                     )
                     Spacer(Modifier.height(DarkIOSpace.S3))
-                    if (!hintSeen) {
+                    if (!hintSeen && !isBedtime) {
                         TypewriterText(
                             text = stringResource(R.string.welcome_prompt),
                             prefix = "$ ",

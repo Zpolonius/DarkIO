@@ -8,7 +8,7 @@ En personlig, legende Android-hjemskærm med et dashboard øverst og en app-skuf
 
 **Mål:** v1 er godt nok til at erstatte telefonens standard-launcher i daglig brug i én uge uden at du skifter tilbage.
 
-**Det er godt nok, når** alle krav F1–F23 og N1–N11 nedenfor er opfyldt, **og det er bevist ved at** hver krav-række har en grøn automatisk test eller et dokumenteret manuelt testskridt med skærmbillede, og verifikationsrunden (afsnit 7) er gennemført uden åbne fund af typen *kritisk* eller *høj*.
+**Det er godt nok, når** alle krav F1–F24 og N1–N11 nedenfor er opfyldt, **og det er bevist ved at** hver krav-række har en grøn automatisk test eller et dokumenteret manuelt testskridt med skærmbillede, og verifikationsrunden (afsnit 7) er gennemført uden åbne fund af typen *kritisk* eller *høj*.
 
 **Målgruppe:** dig selv, på din egen telefon. Appen installeres direkte fra Android Studio (sideload), ikke via Google Play.
 
@@ -28,7 +28,7 @@ Tilbage og Hjem fører altid tilbage til hjemskærmen, og skuffen lukker ved swi
 
 ## Funktionelle krav
 
-23 krav dækker v1. Kolonnen *Bevis* fortæller test-agenten præcis, hvordan kravet skal godkendes: **Unit** = automatisk test af logik, **UI-test** = automatisk Compose-test på emulator, **Manuel** = testskridt på din telefon med skærmbillede.
+24 krav dækker v1. Kolonnen *Bevis* fortæller test-agenten præcis, hvordan kravet skal godkendes: **Unit** = automatisk test af logik, **UI-test** = automatisk Compose-test på emulator, **Manuel** = testskridt på din telefon med skærmbillede.
 
 | ID | Krav | Acceptkriterie | Bevis |
 | --- | --- | --- | --- |
@@ -55,6 +55,7 @@ Tilbage og Hjem fører altid tilbage til hjemskærmen, og skuffen lukker ved swi
 | F21 | Din egen baggrund | Hjemskærmen viser den baggrund, der allerede er sat på telefonen (temaet windowShowWallpaper). DarkIO læser, kopierer og ændrer aldrig billedet og beder ikke om tilladelse til det. En toning (80 % top, ca. 35 % midt, 95 % bund) holder teksten læsbar; topniveauet kan justeres 60–90 % i Indstillinger. Skuffe, søgning og indstillinger er helt mørke | Manuel: din nuværende baggrund ses efter skift til DarkIO og er uændret efter skift tilbage. UI-test af kontrast med en hvid og en sort testbaggrund |
 | F22 | Aktivitetsgitter | 20 ugers gitter over daglige skridt og gennemførte træninger på træningssiden. Dage over skridtmål vises i pastel-mint; gennemførte træninger som pastel-coral prik; i dag har accent-ramme; ældre dage (>30 dage) uden historikadgang vises med stiplet ramme og knap til at give adgang. Over gitteret vises antal måldage og træninger. TalkBack læser én samlet beskrivelse | Unit (sommertid, 10.000 grænse, ugestart mandag, ældre dage) + UI-test |
 | F23 | Arbejdstid / Fritid | I arbejdstiden (indstilles i Indstillinger: dage, start/slut, arbejdskalendere) vises arbejdstid-mærkat på side 1 („i dag“), side 1 bruger arbejdsrækken med genveje (Outlook, Teams, Slack seedet), kalenderkortet viser kun arbejdsaftaler, og Fyraften-knap tilbydes i tommelfingerzonen. Tastes Fyraften, skiftes straks til personlig tilstand og Androids „Fyraften“ Forstyr ikke-tilstand aktiveres. Uden for arbejdstid vises personlige genveje og aftaler | Unit (isWorkHours, ZenRule) + UI-test |
+| F24 | Godnat-tilstand (Sengetid) | Når Forstyr ikke er aktivt i sengetids-intervallet (standard 18:00–10:00), viser side 1 („i dag“) en godnat-visning med dæmpet ur, dato, næste vækkeur (eller „intet vækkeur“), første aftale i morgen (eller „fri i morgen_“), dagens skridt og om træning er gennemført. Genvejsrække og tip skjules, og knappen „Sengetid-indstillinger“ tilbydes i tommelfingerzonen. Tidsrummet konfigureres i Indstillinger | Unit (isBedtimeMode, formatNextAlarm) + UI-test |
 
 ## Ikke-funktionelle krav
 

@@ -72,6 +72,15 @@ I arbejdstiden (F23) tilpasses side 1 automatisk:
 - Kalenderkortet filtrerer og viser udelukkende aftaler fra valgte arbejdskalendere.
 - En „Fyraften“-knap (`surface-glass`, `ink`-tekst, mindst 44 dp trykflade) placeres i tommelfingerzonen over genvejsrækken. Et tryk skifter straks til personlig tilstand og aktiverer Androids „Fyraften“ Forstyr ikke-tilstand.
 
+### 1a · Hjem: i dag ved sengetid
+
+Når Forstyr ikke er aktivt inden for sengetids-tidsrummet (F24, standard 18:00–10:00), skifter side 1 automatisk til godnat-visning:
+- Et stort dæmpet ur (`ink-soft` med skygge) og dato danner toppen af siden.
+- Dagens opfølgning og morgendagens overblik samles på `surface-glass`: næste vækkeur (eller „intet vækkeur“), første aftale i morgen (eller „fri i morgen_“), dagens skridt og om træningen er gennemført.
+- Ingen tip (`TipCard`), ingen arbejdstid-mærkat eller Fyraften-knap, og ingen skrivemaskine-effekt (alt vises direkte).
+- Genvejsrækken skjules for ro og enkelhed (som på side 3), mens dock og søgefelt forbliver faste i bunden.
+- En „Sengetid-indstillinger“-knap (`surface-glass`, `ink`-tekst, mindst 44 dp trykflade) placeres i tommelfingerzonen og åbner systemets sengetid- eller Forstyr ikke-indstillinger.
+
 ## Din baggrund
 
 Hjemskærmen viser brugerens egen baggrund, fx et familiebillede. Android tegner den bagved; DarkIO læser og gemmer aldrig billedet.
