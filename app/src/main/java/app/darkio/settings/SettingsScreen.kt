@@ -166,6 +166,50 @@ fun SettingsScreen(
             }
         }
         Spacer(Modifier.height(DarkIOSpace.S5))
+        Group {
+            LinkRow(R.string.settings_workout_program, DarkIOColors.Ink, Modifier.testTag("link_workout").clickable(role = Role.Button, onClick = onOpenWorkout))
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(stringResource(R.string.settings_step_goal), Modifier.weight(1f), style = DarkIOType.Item.copy(color = DarkIOColors.Ink))
+                StepButton(R.string.settings_step_minus, R.string.settings_step_goal_down, "stepGoalDown") {
+                    onChange { it.withStepGoal(it.stepGoal - STEP_GOAL_STEP) }
+                }
+                BasicText(
+                    formatStepNumber(settings.stepGoal),
+                    Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("settingsStepGoal"),
+                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink, textAlign = TextAlign.Center),
+                )
+                StepButton(R.string.settings_step_plus, R.string.settings_step_goal_up, "stepGoalUp") {
+                    onChange { it.withStepGoal(it.stepGoal + STEP_GOAL_STEP) }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(stringResource(R.string.settings_background), Modifier.weight(1f), style = DarkIOType.Item.copy(color = DarkIOColors.Ink))
+                StepButton(R.string.settings_step_minus, R.string.settings_scrim_down, "scrimTopDown") {
+                    onChange { it.withScrimTop(it.scrimTop - SCRIM_TOP_STEP) }
+                }
+                BasicText(
+                    stringResource(R.string.settings_scrim_value, settings.scrimTop),
+                    Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("settingsScrimTop"),
+                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink, textAlign = TextAlign.Center),
+                )
+                StepButton(R.string.settings_step_plus, R.string.settings_scrim_up, "scrimTopUp") {
+                    onChange { it.withScrimTop(it.scrimTop + SCRIM_TOP_STEP) }
+                }
+            }
+            LinkRow(R.string.hidden_apps_title, DarkIOColors.Ink, Modifier.clickable(role = Role.Button, onClick = onOpenHidden))
+            LinkRow(
+                R.string.settings_reset_all,
+                DarkIOColors.Danger,
+                Modifier.testTag("link_reset_all").clickable(role = Role.Button) { confirmingReset = true },
+            )
+        }
+        Spacer(Modifier.height(DarkIOSpace.S5))
         SectionLabel(R.string.settings_work_hours_label)
         Group {
             Row(
@@ -330,50 +374,6 @@ fun SettingsScreen(
                             openNotificationPolicyAccessSettings(context)
                         }
                     },
-            )
-        }
-        Spacer(Modifier.height(DarkIOSpace.S5))
-        Group {
-            LinkRow(R.string.settings_workout_program, DarkIOColors.Ink, Modifier.testTag("link_workout").clickable(role = Role.Button, onClick = onOpenWorkout))
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                BasicText(stringResource(R.string.settings_step_goal), Modifier.weight(1f), style = DarkIOType.Item.copy(color = DarkIOColors.Ink))
-                StepButton(R.string.settings_step_minus, R.string.settings_step_goal_down, "stepGoalDown") {
-                    onChange { it.withStepGoal(it.stepGoal - STEP_GOAL_STEP) }
-                }
-                BasicText(
-                    formatStepNumber(settings.stepGoal),
-                    Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("settingsStepGoal"),
-                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink, textAlign = TextAlign.Center),
-                )
-                StepButton(R.string.settings_step_plus, R.string.settings_step_goal_up, "stepGoalUp") {
-                    onChange { it.withStepGoal(it.stepGoal + STEP_GOAL_STEP) }
-                }
-            }
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                BasicText(stringResource(R.string.settings_background), Modifier.weight(1f), style = DarkIOType.Item.copy(color = DarkIOColors.Ink))
-                StepButton(R.string.settings_step_minus, R.string.settings_scrim_down, "scrimTopDown") {
-                    onChange { it.withScrimTop(it.scrimTop - SCRIM_TOP_STEP) }
-                }
-                BasicText(
-                    stringResource(R.string.settings_scrim_value, settings.scrimTop),
-                    Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("settingsScrimTop"),
-                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink, textAlign = TextAlign.Center),
-                )
-                StepButton(R.string.settings_step_plus, R.string.settings_scrim_up, "scrimTopUp") {
-                    onChange { it.withScrimTop(it.scrimTop + SCRIM_TOP_STEP) }
-                }
-            }
-            LinkRow(R.string.hidden_apps_title, DarkIOColors.Ink, Modifier.clickable(role = Role.Button, onClick = onOpenHidden))
-            LinkRow(
-                R.string.settings_reset_all,
-                DarkIOColors.Danger,
-                Modifier.testTag("link_reset_all").clickable(role = Role.Button) { confirmingReset = true },
             )
         }
     }

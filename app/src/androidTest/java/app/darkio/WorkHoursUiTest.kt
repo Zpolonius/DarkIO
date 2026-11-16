@@ -4,9 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import app.darkio.dashboard.CalendarEvent
 import app.darkio.dashboard.DeviceCalendar
 import app.darkio.data.AppEntry
@@ -48,23 +50,23 @@ class WorkHoursUiTest {
         }
 
         // Mon is initially selected; click to toggle off
-        rule.onNodeWithTag("workDay_MONDAY").performClick()
+        rule.onNodeWithTag("workDay_MONDAY").performScrollTo().performClick()
         assertFalse(DayOfWeek.MONDAY in settings.workDays)
 
         // Sat is initially unselected; click to toggle on
-        rule.onNodeWithTag("workDay_SATURDAY").performClick()
+        rule.onNodeWithTag("workDay_SATURDAY").performScrollTo().performClick()
         assertTrue(DayOfWeek.SATURDAY in settings.workDays)
 
         // Start time: initially 08:00 (480 min). Click workStartPlus -> 08:30 (510 min)
-        rule.onNodeWithTag("workStartPlus").performClick()
+        rule.onNodeWithTag("workStartPlus").performScrollTo().performClick()
         assertEquals(8 * 60 + 30, settings.workStartMinutes)
 
         // End time: initially 16:00 (960 min). Click workEndMinus -> 15:30 (930 min)
-        rule.onNodeWithTag("workEndMinus").performClick()
+        rule.onNodeWithTag("workEndMinus").performScrollTo().performClick()
         assertEquals(15 * 60 + 30, settings.workEndMinutes)
 
         // Toggle work calendar
-        rule.onNodeWithTag("workCalendar_1").performClick()
+        rule.onNodeWithTag("workCalendar_1").performScrollTo().performClick()
         assertTrue(1L in settings.workCalendarIds)
     }
 
@@ -111,8 +113,8 @@ class WorkHoursUiTest {
 
         rule.onNodeWithTag("workHoursBadge").assertExists()
         rule.onNodeWithTag("fyraftenButton").assertExists()
-        rule.onNodeWithText("WorkApp").assertExists()
-        rule.onNodeWithText("PersonalApp").assertDoesNotExist()
+        rule.onNodeWithContentDescription("WorkApp").assertExists()
+        rule.onNodeWithContentDescription("PersonalApp").assertDoesNotExist()
         rule.onNodeWithText("Work Meeting").assertExists()
         rule.onNodeWithText("Dentist").assertDoesNotExist()
     }
@@ -161,8 +163,8 @@ class WorkHoursUiTest {
         // Check evening
         rule.onNodeWithTag("workHoursBadge").assertDoesNotExist()
         rule.onNodeWithTag("fyraftenButton").assertDoesNotExist()
-        rule.onNodeWithText("PersonalApp").assertExists()
-        rule.onNodeWithText("WorkApp").assertDoesNotExist()
+        rule.onNodeWithContentDescription("PersonalApp").assertExists()
+        rule.onNodeWithContentDescription("WorkApp").assertDoesNotExist()
         rule.onNodeWithText("Dentist").assertExists()
         rule.onNodeWithText("Work Meeting").assertDoesNotExist()
 
@@ -172,8 +174,8 @@ class WorkHoursUiTest {
 
         rule.onNodeWithTag("workHoursBadge").assertDoesNotExist()
         rule.onNodeWithTag("fyraftenButton").assertDoesNotExist()
-        rule.onNodeWithText("PersonalApp").assertExists()
-        rule.onNodeWithText("WorkApp").assertDoesNotExist()
+        rule.onNodeWithContentDescription("PersonalApp").assertExists()
+        rule.onNodeWithContentDescription("WorkApp").assertDoesNotExist()
     }
 
     @Test
@@ -212,7 +214,7 @@ class WorkHoursUiTest {
         // Before click: work mode
         rule.onNodeWithTag("workHoursBadge").assertExists()
         rule.onNodeWithTag("fyraftenButton").assertExists()
-        rule.onNodeWithText("WorkApp").assertExists()
+        rule.onNodeWithContentDescription("WorkApp").assertExists()
 
         // Tap Fyraften
         rule.onNodeWithTag("fyraftenButton").performClick()
@@ -225,7 +227,7 @@ class WorkHoursUiTest {
         // After click: personal mode immediately
         rule.onNodeWithTag("workHoursBadge").assertDoesNotExist()
         rule.onNodeWithTag("fyraftenButton").assertDoesNotExist()
-        rule.onNodeWithText("PersonalApp").assertExists()
-        rule.onNodeWithText("WorkApp").assertDoesNotExist()
+        rule.onNodeWithContentDescription("PersonalApp").assertExists()
+        rule.onNodeWithContentDescription("WorkApp").assertDoesNotExist()
     }
 }

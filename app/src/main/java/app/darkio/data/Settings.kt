@@ -95,10 +95,6 @@ suspend fun DataStore<Preferences>.markWorkRowSeeded() {
     edit { it[WorkRowSeededKey] = true }
 }
 
-suspend fun DataStore<Preferences>.setWorkRowSeeded(seeded: Boolean) {
-    edit { it[WorkRowSeededKey] = seeded }
-}
-
 private fun Preferences.toSettings() = Settings(
     accent = AccentChoice.entries.firstOrNull { it.name == this[AccentKey] } ?: AccentChoice.Lime,
     cards = HomeCard.entries.filter { this[cardKey(it)] != false }.toSet(),

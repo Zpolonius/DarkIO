@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
 import app.darkio.dashboard.ActivityGridCard
@@ -224,7 +225,13 @@ fun HomeScreen(
         ) {
             // Siden og dens genvejsrække skifter side sammen; sideprikker over genvejsrækken samt dokken og søgefeltet nedenfor står fast.
             val pageBottomPadding = bottomHeight + shortcutsHeight + DarkIOSpace.S4 + DarkIOSize.PageDotHitHeight + DarkIOSpace.S3
-            HorizontalPager(pager, Modifier.fillMaxSize().testTag("homePager")) { p ->
+            HorizontalPager(
+                pager,
+                Modifier
+                    .fillMaxSize()
+                    .testTag("homePager")
+                    .then(if (drawerOpen || query.isNotBlank()) Modifier.clearAndSetSemantics {} else Modifier),
+            ) { p ->
                 val effectivePage = if (p == 0 && isWorkHours) WORK_SHORTCUTS_PAGE else p
                 val slots = apps.shortcutSlots[effectivePage].orEmpty()
                 val shown = remember(apps.visible, slots) { dockSlots(apps.visible, slots) }

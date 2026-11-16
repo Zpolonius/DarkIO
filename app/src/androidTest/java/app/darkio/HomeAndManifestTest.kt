@@ -37,6 +37,7 @@ class HomeAndManifestTest {
                 "android.permission.health.READ_TOTAL_CALORIES_BURNED",
                 "android.permission.health.READ_HEALTH_DATA_HISTORY",
                 "android.permission.PACKAGE_USAGE_STATS",
+                "android.permission.ACCESS_NOTIFICATION_POLICY",
             ),
             perms.filter { !it.startsWith("app.darkio.") }.toSet(),
         )
