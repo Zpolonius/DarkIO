@@ -37,7 +37,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -148,21 +147,21 @@ fun BuildPage(
                     style = DarkIOType.Label.copy(color = DarkIOColors.InkMuted),
                 )
                 Spacer(Modifier.height(DarkIOSpace.S1))
-                if (!hasAccess) {
-                    BasicText(
-                        stringResource(R.string.ai_grant_access),
-                        style = DarkIOType.Data.copy(color = DarkIOColors.Accent),
-                        modifier = Modifier
-                            .clickable(role = Role.Button, onClick = actualGrantAccess)
-                            .testTag("aiTodayGrantAccess"),
-                    )
-                } else {
-                    BasicText(
-                        formatScreenTime(totalAiToday),
-                        style = DarkIOType.Metric.copy(color = DarkIOColors.Ink),
-                        modifier = Modifier.testTag("aiTodayScreenTime"),
-                    )
-                }
+                val todayText = formatAiTodayHeader(
+                    totalTodayMillis = totalAiToday,
+                    hasAccess = hasAccess,
+                    noAccessText = stringResource(R.string.ai_grant_access),
+                )
+                BasicText(
+                    todayText,
+                    style = if (!hasAccess) DarkIOType.Data.copy(color = DarkIOColors.Accent) else DarkIOType.Metric.copy(color = DarkIOColors.Ink),
+                    modifier = Modifier
+                        .testTag(if (!hasAccess) "aiTodayGrantAccess" else "aiTodayScreenTime")
+                        .let {
+                            if (!hasAccess) it.clickable(role = Role.Button, onClick = actualGrantAccess)
+                            else it
+                        },
+                )
             }
 
             // Kort 2: Dagens tip (langt tryk kopierer)
@@ -186,7 +185,7 @@ fun BuildPage(
                     .testTag("buildTipCard"),
             ) {
                 BasicText(
-                    "// dagens tip",
+                    stringResource(R.string.tip_today_label),
                     style = DarkIOType.Label.copy(color = DarkIOColors.InkMuted),
                 )
                 Spacer(Modifier.height(DarkIOSpace.S2))
@@ -215,7 +214,7 @@ fun BuildPage(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = DarkIOSpace.S5)
-                .padding(bottom = 36.dp),
+                .padding(bottom = DarkIOSpace.S6),
             verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
         ) {
             if (installedAiApps.isEmpty()) {
@@ -299,6 +298,9 @@ private fun AiAppCard(
                     nowMillis = nowInstant().toEpochMilli(),
                     zoneId = zoneId,
                     noAccessText = stringResource(R.string.ai_grant_access),
+                    neverUsedText = stringResource(R.string.ai_last_used_never),
+                    yesterdayText = stringResource(R.string.ai_last_used_yesterday),
+                    todayFormat = stringResource(R.string.ai_last_used_today),
                 )
                 BasicText(
                     usageText,

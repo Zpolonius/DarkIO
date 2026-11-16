@@ -96,16 +96,19 @@ fun formatLastUsed(
     lastUsedMillis: Long,
     nowMillis: Long = System.currentTimeMillis(),
     zoneId: ZoneId = ZoneId.systemDefault(),
+    neverUsedText: String = "aldrig brugt",
+    yesterdayText: String = "i går",
+    todayFormat: String = "kl. %s",
 ): String {
-    if (lastUsedMillis <= 0L) return "aldrig brugt"
+    if (lastUsedMillis <= 0L) return neverUsedText
     val lastUsed = Instant.ofEpochMilli(lastUsedMillis).atZone(zoneId)
     val now = Instant.ofEpochMilli(nowMillis).atZone(zoneId)
     val lastDate = lastUsed.toLocalDate()
     val nowDate = now.toLocalDate()
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     return when {
-        lastDate == nowDate -> "kl. ${timeFormatter.format(lastUsed)}"
-        lastDate == nowDate.minusDays(1) -> "i går"
+        lastDate == nowDate -> String.format(todayFormat, timeFormatter.format(lastUsed))
+        lastDate == nowDate.minusDays(1) -> yesterdayText
         lastDate.year == nowDate.year -> DateTimeFormatter.ofPattern("d. MMM", Locale("da")).format(lastDate)
         else -> DateTimeFormatter.ofPattern("d. MMM yyyy", Locale("da")).format(lastDate)
     }
@@ -121,9 +124,12 @@ fun formatLastUsedAndToday(
     nowMillis: Long = System.currentTimeMillis(),
     zoneId: ZoneId = ZoneId.systemDefault(),
     noAccessText: String = "giv adgang til brugsdata",
+    neverUsedText: String = "aldrig brugt",
+    yesterdayText: String = "i går",
+    todayFormat: String = "kl. %s",
 ): String {
     if (!hasAccess) return noAccessText
-    val lastUsedStr = formatLastUsed(lastUsedMillis, nowMillis, zoneId)
+    val lastUsedStr = formatLastUsed(lastUsedMillis, nowMillis, zoneId, neverUsedText, yesterdayText, todayFormat)
     val todayStr = formatScreenTime(todayMillis)
     return "$lastUsedStr · $todayStr"
 }

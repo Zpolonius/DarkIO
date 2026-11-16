@@ -99,6 +99,7 @@
     <string name="calendar_untitled">(uden titel)</string>
     <string name="tip_copied">kopieret til udklipsholder</string>
     <string name="tip_copy">kopiér dagens tip</string>
+    <string name="tip_today_label">// dagens tip</string>
     <string name="ai_today_label">// ai i dag</string>
     <string name="ai_grant_access">giv adgang til brugsdata</string>
     <string name="ai_no_conversations">deler ingen samtaler</string>
