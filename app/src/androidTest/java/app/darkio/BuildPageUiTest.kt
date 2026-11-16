@@ -65,7 +65,7 @@ class BuildPageUiTest {
 
         rule.onNodeWithTag("aiTodayCard").assertIsDisplayed()
         rule.onNodeWithTag("buildTipCard").assertIsDisplayed()
-        rule.onNodeWithTag("buildTodayTip").assertIsDisplayed()
+        rule.onNodeWithTag("buildTodayTip", useUnmergedTree = true).assertIsDisplayed()
 
         // Side 3 har ingen genvejsrække
         rule.onNodeWithTag("shortcuts").assertDoesNotExist()
@@ -100,7 +100,7 @@ class BuildPageUiTest {
         }
 
         // Tjek rækkefølge og indhold for Claude
-        rule.onNodeWithTag("aiAppName_${claude.id}").assertIsDisplayed()
+        rule.onNodeWithTag("aiAppName_${claude.id}", useUnmergedTree = true).assertIsDisplayed()
         rule.onNodeWithText("Claude").assertIsDisplayed()
         rule.onNodeWithText("Projekt Alpha").assertIsDisplayed()
 
@@ -109,11 +109,11 @@ class BuildPageUiTest {
         rule.onNodeWithTag("aiShortcut_s2").assertContentDescriptionEquals("Søg i Claude")
 
         // Tjek ChatGPT uden samtaler
-        rule.onNodeWithTag("aiAppName_${chatgpt.id}").assertIsDisplayed()
+        rule.onNodeWithTag("aiAppName_${chatgpt.id}", useUnmergedTree = true).assertIsDisplayed()
         rule.onNodeWithText(context.getString(R.string.ai_no_conversations)).assertIsDisplayed()
 
         // Tjek Gemini
-        rule.onNodeWithTag("aiAppName_${gemini.id}").assertIsDisplayed()
+        rule.onNodeWithTag("aiAppName_${gemini.id}", useUnmergedTree = true).assertIsDisplayed()
         rule.onNodeWithText("Gemini").assertIsDisplayed()
         rule.onNodeWithText("Brainstorm").assertIsDisplayed()
 
