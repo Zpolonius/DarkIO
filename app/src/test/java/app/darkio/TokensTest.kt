@@ -81,6 +81,13 @@ class TokensTest {
         assertEquals(2.dp, DarkIOSize.GridDash)
     }
 
+    @Test
+    fun drawerMaxFractionMatchesToken() {
+        val tokens = Regex(""""name":\s*"([a-z-]+)",\s*"value":\s*"([^"]+)"""")
+            .findAll(json.readText()).associate { it.groupValues[1] to it.groupValues[2] }
+        assertEquals(tokens.getValue("drawer-max-fraction").toFloat(), DarkIOSize.DrawerMaxFraction, 0.0001f)
+    }
+
     private fun parse(v: String): Color =
         if (v.startsWith("#")) Color(0xFF000000 or v.drop(1).toLong(16))
         else v.substringAfter("(").substringBefore(")").split(",").map { it.trim() }.let { (r, g, b, a) ->

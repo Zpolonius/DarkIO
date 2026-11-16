@@ -432,9 +432,8 @@ fun HomeScreen(
                 apps = apps.visible,
                 onLaunch = onLaunch,
                 onMenu = { menuAppId = it.id },
-                onShowHidden = { hiddenOpen = true },
                 onDismiss = { drawerOpen = false },
-                modifier = Modifier.imePadding().heightIn(max = maxHeight / 2),
+                modifier = Modifier.imePadding().heightIn(max = maxHeight * DarkIOSize.DrawerMaxFraction),
             )
         }
         if (menuApp != null) {
