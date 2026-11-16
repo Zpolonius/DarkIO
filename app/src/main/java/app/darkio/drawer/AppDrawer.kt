@@ -165,17 +165,10 @@ internal fun AppIcon(
 ) {
     val px = with(LocalDensity.current) { size.roundToPx() }
     val dpi = LocalConfiguration.current.densityDpi
-    val cached = cache.get(app.id, px)
-    val icon by produceState(initialValue = cached, app.id, px) {
-        if (value == null) {
-            val fromCache = cache.get(app.id, px)
-            if (fromCache != null) {
-                value = fromCache
-            } else {
-                value = withContext(Dispatchers.IO) {
-                    loader(app, px, dpi)?.also { cache.put(app.id, px, it) }
-                }
-            }
+    val cached = remember(app.id, px) { cache.get(app.id, px) }
+    val icon by produceState(cached, app.id, px) {
+        value = cached ?: withContext(Dispatchers.IO) {
+            loader(app, px, dpi)?.also { cache.put(app.id, px, it) }
         }
     }
     Box(

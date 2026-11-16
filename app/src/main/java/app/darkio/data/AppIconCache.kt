@@ -20,24 +20,15 @@ open class AppIconCache(val maxSize: Int = DEFAULT_APP_ICON_CACHE_SIZE) {
 
     val size: Int get() = synchronized(lock) { lru.size() }
 
-    open fun get(key: AppIconKey): ImageBitmap? = synchronized(lock) { lru.get(key) }
-    open fun get(appId: String, size: Int): ImageBitmap? = get(AppIconKey(appId, size))
+    fun get(key: AppIconKey): ImageBitmap? = synchronized(lock) { lru.get(key) }
+    fun get(appId: String, size: Int): ImageBitmap? = get(AppIconKey(appId, size))
 
-    open fun put(key: AppIconKey, bitmap: ImageBitmap) {
+    fun put(key: AppIconKey, bitmap: ImageBitmap) {
         synchronized(lock) { lru.put(key, bitmap) }
     }
-    open fun put(appId: String, size: Int, bitmap: ImageBitmap) = put(AppIconKey(appId, size), bitmap)
+    fun put(appId: String, size: Int, bitmap: ImageBitmap) = put(AppIconKey(appId, size), bitmap)
 
-    open fun remove(key: AppIconKey): ImageBitmap? = synchronized(lock) { lru.remove(key) }
-
-    open fun remove(appId: String) = synchronized(lock) {
-        val keys = lru.snapshot().keys.filter { it.appId == appId }
-        for (k in keys) {
-            lru.remove(k)
-        }
-    }
-
-    open fun removePackage(packageName: String) = synchronized(lock) {
+    fun removePackage(packageName: String) = synchronized(lock) {
         val prefix = "$packageName/"
         val keys = lru.snapshot().keys.filter { it.appId.startsWith(prefix) || it.appId == packageName }
         for (k in keys) {
@@ -45,5 +36,5 @@ open class AppIconCache(val maxSize: Int = DEFAULT_APP_ICON_CACHE_SIZE) {
         }
     }
 
-    open fun clear() = synchronized(lock) { lru.evictAll() }
+    fun clear() = synchronized(lock) { lru.evictAll() }
 }
