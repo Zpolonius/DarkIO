@@ -110,6 +110,7 @@ fun extractUsageSessions(events: List<FocusUsageEvent>, startTimeMillis: Long, e
     val sessions = mutableListOf<FocusSession>()
     var activePackage: String? = null
     var activeStart: Long? = null
+    var hasSeenSessionOrScreenEvent = false
     fun close(t: Long) {
         val s = activeStart ?: return
         val cStart = s.coerceIn(startTimeMillis, endTimeMillis)
@@ -119,23 +120,31 @@ fun extractUsageSessions(events: List<FocusUsageEvent>, startTimeMillis: Long, e
         activeStart = null
     }
     for (event in events.sortedBy { it.timestampMillis }) {
-        if (event.timestampMillis !in startTimeMillis..endTimeMillis) continue
+        if (event.timestampMillis > endTimeMillis) break
+        val inRange = event.timestampMillis >= startTimeMillis
         when (event.eventType) {
             UsageEvents.Event.ACTIVITY_RESUMED -> {
                 close(event.timestampMillis)
+                if (inRange) hasSeenSessionOrScreenEvent = true
                 if (excludedPackage == null || event.packageName != excludedPackage) {
                     activePackage = event.packageName
                     activeStart = event.timestampMillis
                 }
             }
             UsageEvents.Event.ACTIVITY_PAUSED -> {
-                if (activePackage == event.packageName) close(event.timestampMillis)
-                else if (activePackage == null && (excludedPackage == null || event.packageName != excludedPackage)) {
+                if (activePackage == event.packageName) {
+                    close(event.timestampMillis)
+                    if (inRange) hasSeenSessionOrScreenEvent = true
+                } else if (inRange && !hasSeenSessionOrScreenEvent && activePackage == null && (excludedPackage == null || event.packageName != excludedPackage)) {
                     val cEnd = event.timestampMillis.coerceIn(startTimeMillis, endTimeMillis)
                     if (cEnd > startTimeMillis && event.packageName.isNotEmpty()) sessions.add(FocusSession(startTimeMillis, cEnd, event.packageName))
+                    hasSeenSessionOrScreenEvent = true
                 }
             }
-            UsageEvents.Event.SCREEN_NON_INTERACTIVE, UsageEvents.Event.KEYGUARD_SHOWN -> close(event.timestampMillis)
+            UsageEvents.Event.SCREEN_NON_INTERACTIVE, UsageEvents.Event.KEYGUARD_SHOWN -> {
+                close(event.timestampMillis)
+                if (inRange) hasSeenSessionOrScreenEvent = true
+            }
         }
     }
     close(endTimeMillis)
@@ -160,8 +169,8 @@ fun calculateHourlyBars(events: List<FocusUsageEvent>, date: LocalDate, now: Ins
     val ranges = getDayHourlyRanges(date, zoneId)
     val start = ranges.firstOrNull()?.first?.toEpochMilli() ?: 0L
     val end = ranges.lastOrNull()?.second?.toEpochMilli() ?: 0L
-    val sessions = extractUsageSessions(events, start, end, excludedPackage)
     val nowMs = now.toEpochMilli()
+    val sessions = extractUsageSessions(events, start, minOf(end, nowMs), excludedPackage)
     return ranges.mapIndexed { i, (s, e) ->
         val sMs = s.toEpochMilli(); val eMs = e.toEpochMilli()
         val dur = sessions.sumOf { maxOf(0L, minOf(it.endMillis, eMs) - maxOf(it.startMillis, sMs)) }
