@@ -99,6 +99,15 @@
     <string name="calendar_untitled">(uden titel)</string>
     <string name="tip_copied">kopieret til udklipsholder</string>
     <string name="tip_copy">kopiér dagens tip</string>
+    <string name="tip_today_label">// dagens tip</string>
+    <string name="ai_today_label">// ai i dag</string>
+    <string name="ai_grant_access">giv adgang til brugsdata</string>
+    <string name="ai_no_conversations">deler ingen samtaler</string>
+    <string name="ai_empty">// ingen ai-apps fundet_</string>
+    <string name="ai_shortcut_talkback">%1$s i %2$s</string>
+    <string name="ai_last_used_never">aldrig brugt</string>
+    <string name="ai_last_used_yesterday">i går</string>
+    <string name="ai_last_used_today">kl. %1$s</string>
     <string name="workout_rest_day">hviledag</string>
     <string name="workout_mark_completed">markér som gennemført</string>
     <string name="workout_completed">gennemført</string>

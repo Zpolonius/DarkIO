@@ -256,7 +256,10 @@ fun HomeScreen(
                                 )
                             }
                         } else if (p == 2) {
-                            BuildPage()
+                            BuildPage(
+                                apps = apps.visible,
+                                onLaunch = onLaunch,
+                            )
                         }
                         // Fast plads over sideprikkerne; på glas, så den kan læses på lyse billeder (N8).
                         BasicText(
@@ -265,7 +268,7 @@ fun HomeScreen(
                             modifier = Modifier.align(Alignment.BottomCenter).testTag("page$p").clip(DarkIOShapes.Pill).background(DarkIOColors.SurfaceGlass).padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
                         )
                     }
-                    if (query.isBlank()) {
+                    if (query.isBlank() && p != 2) {
                         Box(
                             Modifier
                                 .align(Alignment.BottomCenter)
