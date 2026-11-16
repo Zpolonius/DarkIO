@@ -33,8 +33,10 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -54,22 +56,29 @@ import androidx.core.content.ContextCompat
 import androidx.health.connect.client.PermissionController
 import app.darkio.R
 import app.darkio.dashboard.CALORIES_PERMISSIONS
+import app.darkio.dashboard.DeviceCalendar
 import app.darkio.dashboard.STEPS_PERMISSIONS
 import app.darkio.dashboard.checkCaloriesPermission
 import app.darkio.dashboard.checkStepsPermission
 import app.darkio.dashboard.formatStepNumber
 import app.darkio.dashboard.hasUsageStatsPermission
 import app.darkio.dashboard.openUsageAccessSettings
+import app.darkio.dashboard.queryDeviceCalendars
 import app.darkio.data.AccentChoice
 import app.darkio.data.HomeCard
 import app.darkio.data.SCRIM_TOP_STEP
 import app.darkio.data.STEP_GOAL_STEP
 import app.darkio.data.Settings
+import app.darkio.data.formatWorkTime
+import app.darkio.data.isNotificationPolicyAccessGranted
+import app.darkio.data.openFyraftenRuleSettings
+import app.darkio.data.openNotificationPolicyAccessSettings
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOShapes
 import app.darkio.ui.theme.DarkIOSize
 import app.darkio.ui.theme.DarkIOSpace
 import app.darkio.ui.theme.DarkIOType
+import java.time.DayOfWeek
 import kotlinx.coroutines.launch
 
 /**
@@ -85,9 +94,24 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onResetAll: () -> Unit = {},
     requestAccess: ((HomeCard) -> Unit)? = null,
+    calendarsOverride: List<DeviceCalendar>? = null,
 ) {
+    val context = LocalContext.current
     val request = requestAccess ?: rememberAccessRequester()
     var confirmingReset by rememberSaveable { mutableStateOf(false) }
+    var deviceCalendars by remember { mutableStateOf<List<DeviceCalendar>?>(calendarsOverride) }
+    LaunchedEffect(calendarsOverride) {
+        if (calendarsOverride != null) {
+            deviceCalendars = calendarsOverride
+        } else {
+            val hasCalPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
+            if (hasCalPermission) {
+                deviceCalendars = queryDeviceCalendars(context)
+            } else {
+                deviceCalendars = emptyList()
+            }
+        }
+    }
     Box(modifier.fillMaxSize()) {
     Column(
         Modifier
@@ -140,6 +164,173 @@ fun SettingsScreen(
                     Toggle(on, card.name)
                 }
             }
+        }
+        Spacer(Modifier.height(DarkIOSpace.S5))
+        SectionLabel(R.string.settings_work_hours_label)
+        Group {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(
+                    stringResource(R.string.work_days_label),
+                    Modifier.weight(1f),
+                    style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                )
+            }
+            val days = listOf(
+                DayOfWeek.MONDAY to R.string.work_day_mon,
+                DayOfWeek.TUESDAY to R.string.work_day_tue,
+                DayOfWeek.WEDNESDAY to R.string.work_day_wed,
+                DayOfWeek.THURSDAY to R.string.work_day_thu,
+                DayOfWeek.FRIDAY to R.string.work_day_fri,
+                DayOfWeek.SATURDAY to R.string.work_day_sat,
+                DayOfWeek.SUNDAY to R.string.work_day_sun,
+            )
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+                horizontalArrangement = Arrangement.spacedBy(DarkIOSpace.S1),
+            ) {
+                days.forEach { (day, labelRes) ->
+                    val on = day in settings.workDays
+                    val label = stringResource(labelRes)
+                    Box(
+                        Modifier
+                            .testTag("workDay_${day.name}")
+                            .weight(1f)
+                            .heightIn(min = DarkIOSize.TouchMin)
+                            .clip(DarkIOShapes.Md)
+                            .background(if (on) DarkIOColors.Accent else DarkIOColors.Bg)
+                            .clickable(role = Role.Checkbox) {
+                                onChange { it.copy(workDays = if (on) it.workDays - day else it.workDays + day) }
+                            }
+                            .semantics { contentDescription = label },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        BasicText(
+                            label,
+                            style = DarkIOType.Button.copy(color = if (on) DarkIOColors.Bg else DarkIOColors.InkMuted),
+                        )
+                    }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(
+                    stringResource(R.string.work_start_label),
+                    Modifier.weight(1f),
+                    style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                )
+                StepButton(R.string.settings_step_minus, R.string.work_start_down_desc, "workStartMinus") {
+                    onChange { it.copy(workStartMinutes = (it.workStartMinutes - 30 + 1440) % 1440) }
+                }
+                BasicText(
+                    formatWorkTime(settings.workStartMinutes),
+                    Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("workStartTime"),
+                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink, textAlign = TextAlign.Center),
+                )
+                StepButton(R.string.settings_step_plus, R.string.work_start_up_desc, "workStartPlus") {
+                    onChange { it.copy(workStartMinutes = (it.workStartMinutes + 30) % 1440) }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(
+                    stringResource(R.string.work_end_label),
+                    Modifier.weight(1f),
+                    style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                )
+                StepButton(R.string.settings_step_minus, R.string.work_end_down_desc, "workEndMinus") {
+                    onChange { it.copy(workEndMinutes = (it.workEndMinutes - 30 + 1440) % 1440) }
+                }
+                BasicText(
+                    formatWorkTime(settings.workEndMinutes),
+                    Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("workEndTime"),
+                    style = DarkIOType.Data.copy(color = DarkIOColors.Ink, textAlign = TextAlign.Center),
+                )
+                StepButton(R.string.settings_step_plus, R.string.work_end_up_desc, "workEndPlus") {
+                    onChange { it.copy(workEndMinutes = (it.workEndMinutes + 30) % 1440) }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(
+                    stringResource(R.string.work_calendars_label),
+                    Modifier.weight(1f),
+                    style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                )
+            }
+            val cals = deviceCalendars.orEmpty()
+            if (cals.isEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchMin).padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BasicText(
+                        stringResource(R.string.work_calendars_empty),
+                        style = DarkIOType.Data.copy(color = DarkIOColors.InkMuted),
+                    )
+                }
+            } else {
+                cals.forEach { cal ->
+                    val selected = cal.id in settings.workCalendarIds
+                    val suggested = settings.workCalendarIds.isEmpty() && cal.isSuggestedOutlook
+                    Row(
+                        Modifier
+                            .testTag("workCalendar_${cal.id}")
+                            .fillMaxWidth()
+                            .heightIn(min = DarkIOSize.TouchMin)
+                            .toggleable(selected, role = Role.Checkbox) {
+                                onChange { s ->
+                                    s.copy(workCalendarIds = if (it) s.workCalendarIds + cal.id else s.workCalendarIds - cal.id)
+                                }
+                            }
+                            .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            BasicText(
+                                cal.displayName.ifBlank { cal.accountName },
+                                style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                            )
+                            if (suggested) {
+                                BasicText(
+                                    stringResource(R.string.work_calendar_suggested),
+                                    style = DarkIOType.Data.copy(color = DarkIOColors.Accent),
+                                )
+                            } else if (cal.accountName.isNotBlank() && cal.accountName != cal.displayName) {
+                                BasicText(
+                                    cal.accountName,
+                                    style = DarkIOType.Data.copy(color = DarkIOColors.InkMuted),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(DarkIOSpace.S3))
+                        Toggle(selected, "workCalendar_${cal.id}")
+                    }
+                }
+            }
+            LinkRow(
+                res = R.string.settings_work_zen_rule,
+                color = DarkIOColors.Ink,
+                modifier = Modifier
+                    .testTag("link_work_zen_rule")
+                    .clickable(role = Role.Button) {
+                        if (isNotificationPolicyAccessGranted(context)) {
+                            openFyraftenRuleSettings(context, settings.workZenRuleId)
+                        } else {
+                            openNotificationPolicyAccessSettings(context)
+                        }
+                    },
+            )
         }
         Spacer(Modifier.height(DarkIOSpace.S5))
         Group {

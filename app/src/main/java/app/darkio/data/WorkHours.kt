@@ -39,6 +39,15 @@ private fun appUserSerial(app: AppEntry): Long =
     app.id.substringAfter('#', "0").toLongOrNull() ?: 0L
 
 /**
+ * Formaterer minutter fra midnat (0..1439) som "HH:mm".
+ */
+fun formatWorkTime(minutes: Int): String {
+    val h = (minutes / 60) % 24
+    val m = minutes % 60
+    return String.format("%02d:%02d", h, m)
+}
+
+/**
  * Danner start-genveje til arbejdsrækken ud fra installerede apps:
  * com.microsoft.office.outlook, com.microsoft.teams, com.Slack (i den rækkefølge, pladser 0..2).
  * Manglende apps udelades.

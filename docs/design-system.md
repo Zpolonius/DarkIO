@@ -64,6 +64,14 @@ Hjemskærmen har tre sider med hver sit fokus: **i dag** (ur, aftale, fokus, tip
 - Sideprikker: aktiv side er en 20 × 6 pille i `accent`, andre er 6 × 6 i `line-strong`; hver prik har en 44 × 24 trykflade.
 - Højst tre sider. En fjerde side er en swipe mere til det, du skal bruge.
 
+### 1a · Hjem: i dag i arbejdstid
+
+I arbejdstiden (F23) tilpasses side 1 automatisk:
+- En diskret „arbejdstid“-mærkat/pille (`surface-glass`, `accent`-tekst) vises ved siden af „i dag“-sidemærkaten, læsbar mod enhver baggrund.
+- Genvejsrækken på side 1 skifter til arbejdsrækken (seedet med Outlook, Teams og Slack), mens den personlige række bevares urørt.
+- Kalenderkortet filtrerer og viser udelukkende aftaler fra valgte arbejdskalendere.
+- En „Fyraften“-knap (`surface-glass`, `ink`-tekst, mindst 44 dp trykflade) placeres i tommelfingerzonen over genvejsrækken. Et tryk skifter straks til personlig tilstand og aktiverer Androids „Fyraften“ Forstyr ikke-tilstand.
+
 ## Din baggrund
 
 Hjemskærmen viser brugerens egen baggrund, fx et familiebillede. Android tegner den bagved; DarkIO læser og gemmer aldrig billedet.

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -54,8 +55,10 @@ import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
 import app.darkio.dashboard.ActivityGridCard
 import app.darkio.dashboard.CalendarCard
+import app.darkio.dashboard.CalendarEvent
 import app.darkio.dashboard.CaloriesCard
 import app.darkio.dashboard.ClockCard
+import app.darkio.dashboard.DeviceCalendar
 import app.darkio.dashboard.FocusCard
 import app.darkio.dashboard.StepsCard
 import app.darkio.dashboard.TipCard
@@ -66,9 +69,15 @@ import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
 import app.darkio.data.HomeCard
 import app.darkio.data.Settings
+import app.darkio.data.WORK_SHORTCUTS_PAGE
 import app.darkio.data.dockSlots
 import app.darkio.data.firstFreeSlot
+import app.darkio.data.isWorkHours
 import app.darkio.data.reorderedSlots
+import java.time.ZonedDateTime
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import app.darkio.drawer.AppDrawer
@@ -107,7 +116,19 @@ fun HomeScreen(
     onSettingsChange: ((Settings) -> Settings) -> Unit = {},
     onResetAll: () -> Unit = {},
     requestAccess: ((HomeCard) -> Unit)? = null,
+    nowProvider: () -> ZonedDateTime = { ZonedDateTime.now() },
+    onFyraftenZenRule: (Boolean) -> Unit = {},
+    calendarTestEvents: List<CalendarEvent>? = null,
+    calendarsOverride: List<DeviceCalendar>? = null,
 ) {
+    var resumeTick by remember { mutableIntStateOf(0) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME, lifecycleOwner) {
+        resumeTick++
+    }
+    val now = remember(nowProvider, resumeTick) { nowProvider() }
+    val isWorkHours = remember(settings, now) { isWorkHours(settings, now) }
+
     val pageLabels = listOf(R.string.page_today, R.string.page_training, R.string.page_build).map { stringResource(it) }
     val pager = rememberPagerState { pageLabels.size }
     val scope = rememberCoroutineScope()
@@ -137,8 +158,6 @@ fun HomeScreen(
     LaunchedEffect(dockFull) { if (dockFull) { delay(3000); dockFull = false } }
     // Rækken tegnes pr. side i pageren; menuen bruger den viste side. Skjulte apps beholder deres plads, som i docken.
     val page = pager.currentPage
-    val pageSlots = apps.shortcutSlots[page].orEmpty()
-    val row = remember(apps.visible, pageSlots) { dockSlots(apps.visible, pageSlots) }
     var rowFull by remember { mutableStateOf(false) }
     LaunchedEffect(rowFull) { if (rowFull) { delay(3000); rowFull = false } }
     LaunchedEffect(page) { rowFull = false }
@@ -175,6 +194,7 @@ fun HomeScreen(
                 onResetAll()
             },
             requestAccess = requestAccess,
+            calendarsOverride = calendarsOverride,
         )
         return
     }
@@ -205,7 +225,8 @@ fun HomeScreen(
             // Siden og dens genvejsrække skifter side sammen; sideprikker over genvejsrækken samt dokken og søgefeltet nedenfor står fast.
             val pageBottomPadding = bottomHeight + shortcutsHeight + DarkIOSpace.S4 + DarkIOSize.PageDotHitHeight + DarkIOSpace.S3
             HorizontalPager(pager, Modifier.fillMaxSize().testTag("homePager")) { p ->
-                val slots = apps.shortcutSlots[p].orEmpty()
+                val effectivePage = if (p == 0 && isWorkHours) WORK_SHORTCUTS_PAGE else p
+                val slots = apps.shortcutSlots[effectivePage].orEmpty()
                 val shown = remember(apps.visible, slots) { dockSlots(apps.visible, slots) }
                 Box(Modifier.fillMaxSize()) {
                     // Bag kort og genveje: langt tryk på tom flade åbner Indstillinger (F11).
@@ -221,7 +242,13 @@ fun HomeScreen(
                                 verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
                             ) {
                                 if (HomeCard.Clock in settings.cards) ClockCard(Modifier.testTag("card_Clock"))
-                                if (HomeCard.Calendar in settings.cards) CalendarCard(Modifier.testTag("card_Calendar"))
+                                if (HomeCard.Calendar in settings.cards) CalendarCard(
+                                    modifier = Modifier.testTag("card_Calendar"),
+                                    isWorkHours = isWorkHours,
+                                    workCalendarIds = settings.workCalendarIds,
+                                    testEvents = calendarTestEvents,
+                                    nowMillis = { now.toInstant().toEpochMilli() },
+                                )
                                 if (HomeCard.Focus in settings.cards) FocusCard()
                                 if (HomeCard.Tip in settings.cards) TipCard(Modifier.testTag("card_Tip"))
                             }
@@ -262,25 +289,64 @@ fun HomeScreen(
                             )
                         }
                         // Fast plads over sideprikkerne; på glas, så den kan læses på lyse billeder (N8).
-                        BasicText(
-                            pageLabels[p],
-                            style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft),
-                            modifier = Modifier.align(Alignment.BottomCenter).testTag("page$p").clip(DarkIOShapes.Pill).background(DarkIOColors.SurfaceGlass).padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
-                        )
+                        Row(
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                            horizontalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            BasicText(
+                                pageLabels[p],
+                                style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft),
+                                modifier = Modifier.testTag("page$p").clip(DarkIOShapes.Pill).background(DarkIOColors.SurfaceGlass).padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
+                            )
+                            if (p == 0 && isWorkHours) {
+                                BasicText(
+                                    stringResource(R.string.work_hours_badge),
+                                    style = DarkIOType.Data.copy(color = DarkIOColors.Accent),
+                                    modifier = Modifier
+                                        .testTag("workHoursBadge")
+                                        .clip(DarkIOShapes.Pill)
+                                        .background(DarkIOColors.SurfaceGlass)
+                                        .padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
+                                )
+                            }
+                        }
                     }
                     if (query.isBlank() && p != 2) {
-                        Box(
+                        Column(
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .padding(horizontal = DarkIOSpace.S5)
                                 .padding(bottom = bottomHeight)
                                 .onSizeChanged { shortcutsHeight = with(density) { it.height.toDp() } },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
                         ) {
+                            if (p == 0 && isWorkHours) {
+                                Box(
+                                    modifier = Modifier
+                                        .testTag("fyraftenButton")
+                                        .heightIn(min = DarkIOSize.TouchMin)
+                                        .clip(DarkIOShapes.Pill)
+                                        .background(DarkIOColors.SurfaceGlass)
+                                        .clickable(role = Role.Button) {
+                                            onSettingsChange { it.copy(workEndOverrideDate = now.toLocalDate()) }
+                                            onFyraftenZenRule(true)
+                                        }
+                                        .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    BasicText(
+                                        stringResource(R.string.work_fyraften_button),
+                                        style = DarkIOType.Button.copy(color = DarkIOColors.Ink),
+                                    )
+                                }
+                            }
                             Dock(
                                 shown,
                                 onLaunch,
                                 onMenu = { menuAppId = it.id },
-                                onMove = { from, to -> onSetShortcuts(p, reorderedSlots(shown, from, to, apps.hidden.mapNotNull { slots[it.id] }.toSet()).map { (id, slot) -> shown.filterNotNull().first { it.id == id } to slot }) },
+                                onMove = { from, to -> onSetShortcuts(effectivePage, reorderedSlots(shown, from, to, apps.hidden.mapNotNull { slots[it.id] }.toSet()).map { (id, slot) -> shown.filterNotNull().first { it.id == id } to slot }) },
                                 tag = "shortcuts",
                                 emptyLabel = R.string.shortcut_empty_slot,
                                 label = R.string.shortcuts_label,
@@ -366,6 +432,9 @@ fun HomeScreen(
         }
         if (menuApp != null) {
             val close = { menuAppId = null }
+            val menuShortcutPage = if (page == 0 && isWorkHours) WORK_SHORTCUTS_PAGE else page
+            val menuShortcutSlots = apps.shortcutSlots[menuShortcutPage].orEmpty()
+            val menuRow = remember(apps.visible, menuShortcutSlots) { dockSlots(apps.visible, menuShortcutSlots) }
             AppMenuSheet(
                 app = menuApp,
                 onDismiss = close,
@@ -377,11 +446,11 @@ fun HomeScreen(
                     else dockFull = true
                     close()
                 },
-                isShortcut = row.any { it?.id == menuApp.id },
+                isShortcut = menuRow.any { it?.id == menuApp.id },
                 onToggleShortcut = {
-                    val slot = firstFreeSlot((apps.visible + apps.hidden).mapNotNull { pageSlots[it.id] })
-                    if (row.any { it?.id == menuApp.id }) onSetShortcuts(page, listOf(menuApp to null))
-                    else if (slot != null) onSetShortcuts(page, listOf(menuApp to slot))
+                    val slot = firstFreeSlot((apps.visible + apps.hidden).mapNotNull { menuShortcutSlots[it.id] })
+                    if (menuRow.any { it?.id == menuApp.id }) onSetShortcuts(menuShortcutPage, listOf(menuApp to null))
+                    else if (slot != null) onSetShortcuts(menuShortcutPage, listOf(menuApp to slot))
                     else rowFull = true
                     close()
                 },

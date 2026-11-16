@@ -8,7 +8,7 @@ En personlig, legende Android-hjemskærm med et dashboard øverst og en app-skuf
 
 **Mål:** v1 er godt nok til at erstatte telefonens standard-launcher i daglig brug i én uge uden at du skifter tilbage.
 
-**Det er godt nok, når** alle krav F1–F22 og N1–N11 nedenfor er opfyldt, **og det er bevist ved at** hver krav-række har en grøn automatisk test eller et dokumenteret manuelt testskridt med skærmbillede, og verifikationsrunden (afsnit 7) er gennemført uden åbne fund af typen *kritisk* eller *høj*.
+**Det er godt nok, når** alle krav F1–F23 og N1–N11 nedenfor er opfyldt, **og det er bevist ved at** hver krav-række har en grøn automatisk test eller et dokumenteret manuelt testskridt med skærmbillede, og verifikationsrunden (afsnit 7) er gennemført uden åbne fund af typen *kritisk* eller *høj*.
 
 **Målgruppe:** dig selv, på din egen telefon. Appen installeres direkte fra Android Studio (sideload), ikke via Google Play.
 
@@ -28,7 +28,7 @@ Tilbage og Hjem fører altid tilbage til hjemskærmen, og skuffen lukker ved swi
 
 ## Funktionelle krav
 
-22 krav dækker v1. Kolonnen *Bevis* fortæller test-agenten præcis, hvordan kravet skal godkendes: **Unit** = automatisk test af logik, **UI-test** = automatisk Compose-test på emulator, **Manuel** = testskridt på din telefon med skærmbillede.
+23 krav dækker v1. Kolonnen *Bevis* fortæller test-agenten præcis, hvordan kravet skal godkendes: **Unit** = automatisk test af logik, **UI-test** = automatisk Compose-test på emulator, **Manuel** = testskridt på din telefon med skærmbillede.
 
 | ID | Krav | Acceptkriterie | Bevis |
 | --- | --- | --- | --- |
@@ -54,6 +54,7 @@ Tilbage og Hjem fører altid tilbage til hjemskærmen, og skuffen lukker ved swi
 | F20 | Tre sider på hjemskærmen | Side 1 „i dag“: ur, næste aftale, fokus, dagens tip. Side 2 „træning“: dagens pas, aktivitetsgitter for skridt og træning (F22), skridt, forbrændt. Side 3 „byg“: AI-apps (kort pr. installeret AI-app: Claude, ChatGPT, Gemini med seneste samtale, sidst brugt, tid i dag og genveje; sum af ai i dag og dagens tip øverst; ingen genvejsrække på side 3). Side 1 og 2 har hver sin række med 4 genveje; dock, søgefelt og sideprikker står fast nederst på alle sider. Skift med vandret swipe eller tryk på prikkerne (44 dp trykflade). Hjem-knappen viser altid side 1 | UI-test (swipe skifter side, prikker følger med, Hjem nulstiller til side 1, favoritter flytter sig ikke) + manuel med én hånd |
 | F21 | Din egen baggrund | Hjemskærmen viser den baggrund, der allerede er sat på telefonen (temaet windowShowWallpaper). DarkIO læser, kopierer og ændrer aldrig billedet og beder ikke om tilladelse til det. En toning (80 % top, ca. 35 % midt, 95 % bund) holder teksten læsbar; topniveauet kan justeres 60–90 % i Indstillinger. Skuffe, søgning og indstillinger er helt mørke | Manuel: din nuværende baggrund ses efter skift til DarkIO og er uændret efter skift tilbage. UI-test af kontrast med en hvid og en sort testbaggrund |
 | F22 | Aktivitetsgitter | 20 ugers gitter over daglige skridt og gennemførte træninger på træningssiden. Dage over skridtmål vises i pastel-mint; gennemførte træninger som pastel-coral prik; i dag har accent-ramme; ældre dage (>30 dage) uden historikadgang vises med stiplet ramme og knap til at give adgang. Over gitteret vises antal måldage og træninger. TalkBack læser én samlet beskrivelse | Unit (sommertid, 10.000 grænse, ugestart mandag, ældre dage) + UI-test |
+| F23 | Arbejdstid / Fritid | I arbejdstiden (indstilles i Indstillinger: dage, start/slut, arbejdskalendere) vises arbejdstid-mærkat på side 1 („i dag“), side 1 bruger arbejdsrækken med genveje (Outlook, Teams, Slack seedet), kalenderkortet viser kun arbejdsaftaler, og Fyraften-knap tilbydes i tommelfingerzonen. Tastes Fyraften, skiftes straks til personlig tilstand og Androids „Fyraften“ Forstyr ikke-tilstand aktiveres. Uden for arbejdstid vises personlige genveje og aftaler | Unit (isWorkHours, ZenRule) + UI-test |
 
 ## Ikke-funktionelle krav
 
@@ -64,7 +65,7 @@ En launcher kører hele tiden og ser alle dine apps, så hastighed og privatliv 
 | N1 | Hastighed | Dashboard vises under 500 ms efter Hjem; skuffen åbner under 150 ms og scroller uden hak | Macrobenchmark-test + manuel på telefon |
 | N2 | Hukommelse | Ingen hukommelseslæk efter 50 åbn/luk af skuffen | LeakCanary i debug-build |
 | N3 | Stabilitet | Fejler et kort (fx skridt), vises en fejltekst i kortet, og resten af hjemskærmen virker | Unit-test der kaster fejl i hvert kort |
-| N4 | Tilladelser | Kun: kalender, udvid statuslinje, adgang til brugsdata (PACKAGE\_USAGE\_STATS) og Health Connect READ\_STEPS, READ\_TOTAL\_CALORIES\_BURNED og READ\_HEALTH\_DATA\_HISTORY, samt REQUEST\_DELETE\_PACKAGES (gives ved installation; Android viser altid sin egen bekræftelse ved afinstallation). Hver tilladelse spørges først, når kortet slås til eller vises. Ingen INTERNET. **Ingen** QUERY\_ALL\_PACKAGES | Security-agent læser manifest |
+| N4 | Tilladelser | Kun: kalender, udvid statuslinje, adgang til brugsdata (PACKAGE\_USAGE\_STATS), Health Connect READ\_STEPS, READ\_TOTAL\_CALORIES\_BURNED og READ\_HEALTH\_DATA\_HISTORY, ACCESS\_NOTIFICATION\_POLICY (spørges først når Fyraften slås til), samt REQUEST\_DELETE\_PACKAGES (gives ved installation; Android viser altid sin egen bekræftelse ved afinstallation). Hver tilladelse spørges først, når kortet slås til eller vises. Ingen INTERNET. **Ingen** QUERY\_ALL\_PACKAGES | Security-agent læser manifest |
 | N5 | Privatliv | Intet forlader telefonen: DarkIO har ingen internetadgang. Sundheds-, kalender- og brugsdata læses kun og gemmes ikke af DarkIO. Ingen analytics eller reklame-SDK’er | Security-agent gennemgår afhængigheder og netværkskald |
 | N7 | Ærlighed | „Skjul apps“ er en oprydning, ikke en lås. Det står i appen | UI/UX-agent |
 | N8 | Tilgængelighed | Trykflader mindst 48 dp, kontrast mindst 4,5:1, TalkBack-labels, følger systemets skriftstørrelse og „reducer animationer“ | Accessibility Scanner + UI-test med stor skrift |

@@ -28,6 +28,14 @@ fun desiredZenRuleActive(
 }
 
 /**
+ * Tjekker om appen har adgang til notifikationspolitik (Forstyr ikke).
+ */
+fun isNotificationPolicyAccessGranted(context: Context): Boolean {
+    val nm = context.getSystemService(NotificationManager::class.java) ?: return false
+    return nm.isNotificationPolicyAccessGranted
+}
+
+/**
  * Finder eksisterende eller opretter ny "Fyraften" AutomaticZenRule.
  * Tjekker altid [NotificationManager.isNotificationPolicyAccessGranted] først.
  * Returnerer regel-id eller null hvis tilladelse mangler eller oprettelse fejler.
