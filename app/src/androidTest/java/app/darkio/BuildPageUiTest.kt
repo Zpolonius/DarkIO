@@ -2,16 +2,22 @@ package app.darkio
 
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.height
-import androidx.compose.ui.unit.width
 import androidx.test.platform.app.InstrumentationRegistry
+import app.darkio.dashboard.AiAppCardData
+import app.darkio.dashboard.AiPageData
+import app.darkio.dashboard.AiShortcut
+import app.darkio.dashboard.BuildPage
 import app.darkio.data.AppEntry
 import app.darkio.data.splitApps
 import app.darkio.home.HomeScreen
@@ -22,8 +28,11 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * F17, F20: Side 3 ("byg") viser dagens tip i stort format med kopier-knap i nederste halvdel,
- * og under det vises de to seneste tips.
+ * F15, F17, F20: Side 3 ("byg") viser:
+ * - Øverst: "ai i dag" og dagens tip (med langt tryk til kopiering)
+ * - Nederst: AI-kort for installerede AI-apps (Claude, ChatGPT, Gemini)
+ * - Knapper med mindst 44 dp højde og TalkBack-labels som "Ny chat i Claude"
+ * - Ingen genvejsrække på side 3
  */
 class BuildPageUiTest {
 
@@ -31,12 +40,15 @@ class BuildPageUiTest {
     val rule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
-    private val alfa = AppEntry("alfa/A#0", "Alfa")
+    private val claude = AppEntry("com.anthropic.claude/MainActivity#0", "Claude")
+    private val chatgpt = AppEntry("com.openai.chatgpt/MainActivity#0", "ChatGPT")
+    private val gemini = AppEntry("com.google.android.apps.bard/MainActivity#0", "Gemini")
 
-    private fun show() {
+    @Test
+    fun side3InHomeScreenShowsAiTodayAndTipAndNoShortcutsRow() {
         rule.setContent {
             HomeScreen(
-                apps = splitApps(listOf(alfa), emptySet()).copy(favoriteSlots = mapOf(alfa.id to 0)),
+                apps = splitApps(listOf(claude), emptySet()).copy(favoriteSlots = mapOf(claude.id to 0)),
                 hintSeen = true,
                 onHintSeen = {},
                 onLaunch = {},
@@ -50,60 +62,120 @@ class BuildPageUiTest {
         // Skift til side 3 ("byg")
         rule.onNodeWithTag("pageDot2").performClick()
         rule.waitForIdle()
-    }
 
-    @Test
-    fun side3ShowsTodayTipAndCopyButton() {
-        show()
+        rule.onNodeWithTag("aiTodayCard").assertIsDisplayed()
+        rule.onNodeWithTag("buildTipCard").assertIsDisplayed()
         rule.onNodeWithTag("buildTodayTip").assertIsDisplayed()
-        rule.onNodeWithTag("copyTipButton").assertIsDisplayed()
-        rule.onNodeWithText(context.getString(R.string.tip_copy)).assertIsDisplayed()
+
+        // Side 3 har ingen genvejsrække
+        rule.onNodeWithTag("shortcuts").assertDoesNotExist()
     }
 
     @Test
-    fun side3ShowsTwoRecentTipsUnderTodayTip() {
-        show()
-        val todayBounds = rule.onNodeWithTag("buildTodayTip").getUnclippedBoundsInRoot()
-        val recentBounds = rule.onNodeWithTag("buildRecentTips").getUnclippedBoundsInRoot()
+    fun aiCardsDisplayContentFixedOrderAndButtonsWithTalkBack() {
+        val s1 = AiShortcut("s1", "com.anthropic.claude", "Ny chat", isDynamic = false, rank = 0)
+        val s2 = AiShortcut("s2", "com.anthropic.claude", "Søg", isDynamic = false, rank = 1)
+        val g1 = AiShortcut("g1", "com.google.android.apps.bard", "Prompt", isDynamic = false, rank = 0)
 
-        rule.onNodeWithTag("buildRecentTips").assertIsDisplayed()
-        rule.onNodeWithTag("recentTip0").assertIsDisplayed()
-        rule.onNodeWithTag("recentTip1").assertIsDisplayed()
-
-        // De to seneste tips vises under dagens tip
-        assertTrue(
-            "recentTips starter ikke under todayTip (today: ${todayBounds.bottom}, recent: ${recentBounds.top})",
-            recentBounds.top >= todayBounds.bottom
+        val pageData = AiPageData(
+            cards = listOf(
+                AiAppCardData(claude, "Projekt Alpha", listOf(s1, s2), 1700000000000L, 25 * 60 * 1000L),
+                AiAppCardData(chatgpt, null, emptyList(), 1700000000000L, 10 * 60 * 1000L),
+                AiAppCardData(gemini, "Brainstorm", listOf(g1), 0L, 0L),
+            ),
+            totalTodayMillis = 35 * 60 * 1000L,
+            hasUsageAccess = true,
         )
+
+        var launchedApp: AppEntry? = null
+        var startedShortcut: Pair<String, String>? = null
+
+        rule.setContent {
+            BuildPage(
+                apps = listOf(gemini, chatgpt, claude), // Uordnet input
+                onLaunch = { launchedApp = it },
+                loadData = { pageData },
+                onStartShortcut = { pkg, id -> startedShortcut = pkg to id },
+            )
+        }
+
+        // Tjek rækkefølge og indhold for Claude
+        rule.onNodeWithTag("aiAppName_${claude.id}").assertIsDisplayed()
+        rule.onNodeWithText("Claude").assertIsDisplayed()
+        rule.onNodeWithText("Projekt Alpha").assertIsDisplayed()
+
+        // Tjek TalkBack label på Claude genvej
+        rule.onNodeWithTag("aiShortcut_s1").assertContentDescriptionEquals("Ny chat i Claude")
+        rule.onNodeWithTag("aiShortcut_s2").assertContentDescriptionEquals("Søg i Claude")
+
+        // Tjek ChatGPT uden samtaler
+        rule.onNodeWithTag("aiAppName_${chatgpt.id}").assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.ai_no_conversations)).assertIsDisplayed()
+
+        // Tjek Gemini
+        rule.onNodeWithTag("aiAppName_${gemini.id}").assertIsDisplayed()
+        rule.onNodeWithText("Gemini").assertIsDisplayed()
+        rule.onNodeWithText("Brainstorm").assertIsDisplayed()
+
+        // Tjek tryk på app-række åbner app
+        rule.onNodeWithTag("aiAppRow_${claude.id}").performClick()
+        assertEquals(claude, launchedApp)
+
+        // Tjek tryk på genvej åbner genvej
+        rule.onNodeWithTag("aiShortcut_s1").performClick()
+        assertEquals("com.anthropic.claude" to "s1", startedShortcut)
     }
 
     @Test
-    fun copyButtonIsInBottomHalfAndHasAtLeast48dpTouchTarget() {
-        show()
+    fun aiCardsAreInBottomHalfAndButtonsAreAtLeast44dp() {
+        val s1 = AiShortcut("s1", "com.anthropic.claude", "Ny chat", isDynamic = false, rank = 0)
+        val s2 = AiShortcut("s2", "com.anthropic.claude", "Søg", isDynamic = false, rank = 1)
+
+        val pageData = AiPageData(
+            cards = listOf(
+                AiAppCardData(claude, "Seneste chat", listOf(s1, s2), 1700000000000L, 1000L),
+            ),
+            totalTodayMillis = 1000L,
+            hasUsageAccess = true,
+        )
+
+        rule.setContent {
+            BuildPage(
+                apps = listOf(claude),
+                loadData = { pageData },
+            )
+        }
+
         val rootBounds = rule.onRoot().getUnclippedBoundsInRoot()
-        val buttonBounds = rule.onNodeWithTag("copyTipButton").getUnclippedBoundsInRoot()
         val middle = rootBounds.height / 2
+        val cardBounds = rule.onNodeWithTag("aiCard_${claude.id}").getUnclippedBoundsInRoot()
 
-        // Kopier-knappen ligger i nederste halvdel
+        // AI-kort ligger i nederste halvdel (F15)
         assertTrue(
-            "kopier-knap (${buttonBounds.top}) ligger ikke i nederste halvdel (midte: $middle)",
-            buttonBounds.top >= middle
+            "AI-kort (${cardBounds.top}) skal ligge i nederste halvdel (midte: $middle)",
+            cardBounds.top >= middle
         )
 
-        // Trykflade på mindst 48 dp
+        // Knapper mindst 44 dp (DarkIOSize.TouchMin)
+        val buttonBounds = rule.onNodeWithTag("aiShortcut_s1").getUnclippedBoundsInRoot()
         assertTrue(
-            "kopier-knap højde (${buttonBounds.height.value}) er under 48 dp",
-            buttonBounds.height.value >= 47.9f
+            "Knap højde (${buttonBounds.height.value}) skal være mindst 44 dp",
+            buttonBounds.height.value >= 43.9f
         )
     }
 
     @Test
-    fun copyButtonCopiesTipToClipboardAndShowsConfirmation() {
-        show()
-        rule.onNodeWithTag("copyTipButton").performClick()
+    fun tipCardCopiesTipOnLongClick() {
+        rule.setContent {
+            BuildPage(
+                apps = emptyList(),
+            )
+        }
+
+        rule.onNodeWithTag("buildTipCard").performTouchInput { longClick() }
         rule.waitForIdle()
 
-        // Tjek at udklipsholderen modtog teksten
+        // Tjek at udklipsholder modtog tippet
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = clipboard.primaryClip
@@ -113,7 +185,19 @@ class BuildPageUiTest {
             assertTrue("Kopieret tekst må ikke være tom", copiedText.isNotBlank())
         }
 
-        // Tjek bekræftelsestekst på knappen
+        // Tjek bekræftelsestekst
         rule.onNodeWithText("// ${context.getString(R.string.tip_copied)}_").assertIsDisplayed()
+    }
+
+    @Test
+    fun emptyStateShownWhenNoAiAppsInstalled() {
+        rule.setContent {
+            BuildPage(
+                apps = emptyList(),
+            )
+        }
+
+        rule.onNodeWithTag("aiEmptyState").assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.ai_empty)).assertIsDisplayed()
     }
 }

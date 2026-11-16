@@ -84,7 +84,7 @@ class PageShortcutsUiTest {
         rule.onNodeWithTag("shortcuts_${id("Bravo")}").assertIsDisplayed()
         goTo(2)
         rule.onNodeWithTag("shortcuts_${id("Alfa")}").assertDoesNotExist()
-        rule.onNodeWithTag("shortcutsEmpty_0").assertIsDisplayed()
+        rule.onNodeWithTag("shortcuts").assertDoesNotExist()
         goTo(0)
         rule.onNodeWithTag("shortcuts_${id("Bravo")}").assertDoesNotExist()
     }
