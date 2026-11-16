@@ -42,8 +42,9 @@ fun buildAppLists(
     val custom = validChoices.filter { it.customCategory != null }.associate { it.id() to it.customCategory!! }
     val slots = validChoices.filter { it.favoriteSlot != null }.associate { it.id() to it.favoriteSlot!! }
     val validShortcuts = shortcuts.filter { appId(it.packageName, it.activity, it.userSerial) in installedIds }
+    val shortcutPages = (0 until PAGE_COUNT) + WORK_SHORTCUTS_PAGE
     return splitApps(withCustomCategories(installed, custom), validChoices.filter { it.hidden }.map { it.id() }.toSet())
-        .copy(favoriteSlots = slots, shortcutSlots = (0 until PAGE_COUNT).associateWith { shortcutSlotsOnPage(validShortcuts, it) })
+        .copy(favoriteSlots = slots, shortcutSlots = shortcutPages.associateWith { shortcutSlotsOnPage(validShortcuts, it) })
 }
 
 class AppRepository(private val context: Context, private val scope: CoroutineScope, private val choices: AppChoiceDao) {
