@@ -146,6 +146,43 @@ class FocusTest {
     }
 
     @Test
+    fun calculateFocusDataDoesNotDoubleCountPausedAfterScreenOffOrExcludedApp() {
+        val start = instant(16, 0).toEpochMilli()
+        val end = instant(16, 20).toEpochMilli()
+
+        val events = listOf(
+            // App A: 09:00 - 09:10 (10 min), skærm slukker kl. 09:10, ACTIVITY_PAUSED ankommer bagefter kl. 09:10:01
+            FocusUsageEvent(instant(16, 9, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.a"),
+            FocusUsageEvent(instant(16, 9, 10).toEpochMilli(), UsageEvents.Event.SCREEN_NON_INTERACTIVE),
+            FocusUsageEvent(instant(16, 9, 10, 1).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.a"),
+            // App B: 14:00 - 14:05 (5 min), bruger går til DarkIO kl. 14:05, App B's ACTIVITY_PAUSED ankommer bagefter
+            FocusUsageEvent(instant(16, 14, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.b"),
+            FocusUsageEvent(instant(16, 14, 5).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.darkio"),
+            FocusUsageEvent(instant(16, 14, 5, 1).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.b"),
+            // Senere løsrevet ACTIVITY_PAUSED kl. 18:00 efter låseskærm
+            FocusUsageEvent(instant(16, 18, 0).toEpochMilli(), UsageEvents.Event.KEYGUARD_SHOWN),
+            FocusUsageEvent(instant(16, 18, 0, 1).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.c"),
+        )
+
+        val result = calculateFocusData(events, start, end, excludedPackage = "app.darkio")
+        assertEquals(15 * 60 * 1000L, result.screenTimeMillis)
+    }
+
+    @Test
+    fun calculateFocusDataCarriesResumedBeforeMidnightAcrossDayBoundary() {
+        val start = instant(16, 0).toEpochMilli()
+        val end = instant(16, 6).toEpochMilli()
+
+        val events = listOf(
+            FocusUsageEvent(instant(15, 23, 40).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.night"),
+            FocusUsageEvent(instant(16, 0, 15).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.night"),
+        )
+
+        val result = calculateFocusData(events, start, end)
+        assertEquals(15 * 60 * 1000L, result.screenTimeMillis)
+    }
+
+    @Test
     fun formatScreenTimeFormatsMinutesAndHours() {
         assertEquals("0 m", formatScreenTime(0L))
         assertEquals("45 m", formatScreenTime(45 * 60 * 1000L))
