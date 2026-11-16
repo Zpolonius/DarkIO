@@ -123,4 +123,18 @@ class StepsTest {
             querySteps = { throw CancellationException("Annulleret") },
         )
     }
+
+    @Test
+    fun loadStepsCardStateIncludesSourcesWhenProvided() = runTest {
+        val state = loadStepsCardState(
+            hasAccess = { true },
+            querySteps = { 4_200L },
+            goal = 10_000L,
+            querySources = { listOf("Fitbit", "Samsung Health") },
+        )
+        assertEquals(
+            CardState.Content(StepsData(steps = 4_200L, goal = 10_000L, sources = listOf("Fitbit", "Samsung Health"))),
+            state,
+        )
+    }
 }
