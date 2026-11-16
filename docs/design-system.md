@@ -57,9 +57,9 @@ Andre bevægelser holdes korte: 150–200 ms til skuffen og bundark, ingen fjedr
 
 ## Hjemskærmens sider
 
-Hjemskærmen har tre sider med hver sit fokus: **i dag** (ur, aftale, fokus, tip), **træning** (dagens pas, ugen, skridt, forbrændt) og **byg** (dagens tip i stort format, tidligere tips).
+Hjemskærmen har tre sider med hver sit fokus: **i dag** (ur, aftale, fokus, tip), **træning** (dagens pas, ugen, skridt, forbrændt) og **byg** (AI-apps: Claude, ChatGPT og Gemini med seneste samtale, sidst brugt og genveje; ai i dag og dagens tip øverst).
 
-- Nederst på alle sider, i samme rækkefølge: sideprikker, en række med 4 genveje der hører til siden, en fast dock med 4 favoritter (`surface-glass`, `radius-xl`-agtigt 24px hjørne) og søgefeltet.
+- Nederst på side 1 og 2, i samme rækkefølge: sideprikker, en række med 4 genveje der hører til siden, en fast dock med 4 favoritter (`surface-glass`, `radius-xl`-agtigt 24px hjørne) og søgefeltet. På side 3 (byg) skjules genvejsrækken, så der er plads til AI-kortene i tommelfingerzonen.
 - Docken og søgefeltet flytter sig aldrig. Kun genvejsrækken og indholdet over den skifter.
 - Sideprikker: aktiv side er en 20 × 6 pille i `accent`, andre er 6 × 6 i `line-strong`; hver prik har en 44 × 24 trykflade.
 - Højst tre sider. En fjerde side er en swipe mere til det, du skal bruge.
