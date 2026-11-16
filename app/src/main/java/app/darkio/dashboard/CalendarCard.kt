@@ -37,7 +37,73 @@ data class CalendarEvent(
     val startMillis: Long,
     val endMillis: Long = startMillis,
     val allDay: Boolean = false,
+    val calendarId: Long = 0L,
 )
+
+/**
+ * Filtrerer kalenderbegivenheder ud fra arbejdstid:
+ * - I arbejdstiden: kun begivenheder hvor [calendarId] er i [workCalendarIds].
+ * - Uden for arbejdstiden: kun begivenheder hvor [calendarId] IKKE er i [workCalendarIds].
+ */
+fun filterCalendarEvents(
+    events: List<CalendarEvent>,
+    isWorkHours: Boolean,
+    workCalendarIds: Set<Long>,
+): List<CalendarEvent> {
+    return if (isWorkHours) {
+        events.filter { it.calendarId in workCalendarIds }
+    } else {
+        events.filter { it.calendarId !in workCalendarIds }
+    }
+}
+
+data class DeviceCalendar(
+    val id: Long,
+    val displayName: String,
+    val accountName: String,
+    val isSuggestedOutlook: Boolean = false,
+)
+
+/** Henter enhedens kalendere på Dispatchers.IO. Gemmer intet (N5). */
+suspend fun queryDeviceCalendars(context: Context): List<DeviceCalendar> = withContext(Dispatchers.IO) {
+    val uri = CalendarContract.Calendars.CONTENT_URI
+    val projection = arrayOf(
+        CalendarContract.Calendars._ID,
+        CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
+        CalendarContract.Calendars.ACCOUNT_NAME,
+        CalendarContract.Calendars.ACCOUNT_TYPE,
+    )
+    val list = mutableListOf<DeviceCalendar>()
+    try {
+        context.contentResolver.query(
+            uri,
+            projection,
+            null,
+            null,
+            "${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} ASC",
+        )?.use { cursor ->
+            val idIdx = cursor.getColumnIndex(CalendarContract.Calendars._ID)
+            val nameIdx = cursor.getColumnIndex(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
+            val accountIdx = cursor.getColumnIndex(CalendarContract.Calendars.ACCOUNT_NAME)
+            val typeIdx = cursor.getColumnIndex(CalendarContract.Calendars.ACCOUNT_TYPE)
+            while (cursor.moveToNext()) {
+                val id = if (idIdx >= 0) cursor.getLong(idIdx) else 0L
+                val displayName = if (nameIdx >= 0) cursor.getString(nameIdx).orEmpty() else ""
+                val accountName = if (accountIdx >= 0) cursor.getString(accountIdx).orEmpty() else ""
+                val accountType = if (typeIdx >= 0) cursor.getString(typeIdx).orEmpty() else ""
+                val isSuggested = accountType.contains("outlook", ignoreCase = true) ||
+                    accountType.contains("exchange", ignoreCase = true) ||
+                    accountName.contains("outlook", ignoreCase = true) ||
+                    accountName.contains("office365", ignoreCase = true) ||
+                    displayName.contains("outlook", ignoreCase = true)
+                list.add(DeviceCalendar(id = id, displayName = displayName, accountName = accountName, isSuggestedOutlook = isSuggested))
+            }
+        }
+    } catch (_: SecurityException) {
+    } catch (_: Throwable) {
+    }
+    list
+}
 
 /** Vælger næste aftale de næste 24 timer: ikke afsluttet endnu, tidsfæstet før heldags, tidligste start først (F3). */
 fun selectNextEvent(
@@ -70,11 +136,11 @@ fun formatEventTime(
     }
 }
 
-/** Henter kalenderdata uden for main-tråden (Dispatchers.IO). Gemmer intet (N5). */
-suspend fun queryNextCalendarEvent(
+/** Henter kalenderbegivenheder de næste 24 timer uden for main-tråden (Dispatchers.IO). Gemmer intet (N5). */
+suspend fun queryCalendarEvents(
     context: Context,
     nowMillis: Long = System.currentTimeMillis(),
-): CalendarEvent? = withContext(Dispatchers.IO) {
+): List<CalendarEvent> = withContext(Dispatchers.IO) {
     val windowMillis = 24 * 60 * 60 * 1000L
     val startWindow = nowMillis
     val endWindow = nowMillis + windowMillis
@@ -89,30 +155,49 @@ suspend fun queryNextCalendarEvent(
         CalendarContract.Instances.BEGIN,
         CalendarContract.Instances.END,
         CalendarContract.Instances.ALL_DAY,
+        CalendarContract.Instances.CALENDAR_ID,
     )
 
     val events = mutableListOf<CalendarEvent>()
-    context.contentResolver.query(
-        uri,
-        projection,
-        null,
-        null,
-        "${CalendarContract.Instances.BEGIN} ASC",
-    )?.use { cursor ->
-        val titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE)
-        val beginIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN)
-        val endIdx = cursor.getColumnIndex(CalendarContract.Instances.END)
-        val allDayIdx = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY)
+    try {
+        context.contentResolver.query(
+            uri,
+            projection,
+            null,
+            null,
+            "${CalendarContract.Instances.BEGIN} ASC",
+        )?.use { cursor ->
+            val titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE)
+            val beginIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN)
+            val endIdx = cursor.getColumnIndex(CalendarContract.Instances.END)
+            val allDayIdx = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY)
+            val calIdIdx = cursor.getColumnIndex(CalendarContract.Instances.CALENDAR_ID)
 
-        while (cursor.moveToNext()) {
-            val title = if (titleIdx >= 0) cursor.getString(titleIdx).orEmpty() else ""
-            val begin = if (beginIdx >= 0) cursor.getLong(beginIdx) else 0L
-            val end = if (endIdx >= 0) cursor.getLong(endIdx) else begin
-            val allDay = if (allDayIdx >= 0) cursor.getInt(allDayIdx) == 1 else false
-            events.add(CalendarEvent(title = title, startMillis = begin, endMillis = end, allDay = allDay))
+            while (cursor.moveToNext()) {
+                val title = if (titleIdx >= 0) cursor.getString(titleIdx).orEmpty() else ""
+                val begin = if (beginIdx >= 0) cursor.getLong(beginIdx) else 0L
+                val end = if (endIdx >= 0) cursor.getLong(endIdx) else begin
+                val allDay = if (allDayIdx >= 0) cursor.getInt(allDayIdx) == 1 else false
+                val calendarId = if (calIdIdx >= 0) cursor.getLong(calIdIdx) else 0L
+                events.add(CalendarEvent(title = title, startMillis = begin, endMillis = end, allDay = allDay, calendarId = calendarId))
+            }
         }
+    } catch (_: SecurityException) {
+    } catch (_: Throwable) {
     }
-    selectNextEvent(events, nowMillis, windowMillis)
+    events
+}
+
+/** Henter næste kalenderbegivenhed, filtreret efter arbejdstid (F3, F23). */
+suspend fun queryNextCalendarEvent(
+    context: Context,
+    nowMillis: Long = System.currentTimeMillis(),
+    isWorkHours: Boolean = false,
+    workCalendarIds: Set<Long> = emptySet(),
+): CalendarEvent? {
+    val events = queryCalendarEvents(context, nowMillis)
+    val filtered = filterCalendarEvents(events, isWorkHours, workCalendarIds)
+    return selectNextEvent(filtered, nowMillis)
 }
 
 /** Indlæser korttilstand for kalender. Tjekker tilladelse før hentning (F3, N4). */
@@ -142,15 +227,29 @@ fun CalendarCard(
     loadEvent: (suspend () -> CalendarEvent?)? = null,
     hasPermission: (() -> Boolean)? = null,
     nowMillis: () -> Long = System::currentTimeMillis,
+    isWorkHours: Boolean = false,
+    workCalendarIds: Set<Long> = emptySet(),
+    testEvents: List<CalendarEvent>? = null,
 ) {
     val context = LocalContext.current
     val actualHasPermission = hasPermission ?: {
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.READ_CALENDAR,
-        ) == PackageManager.PERMISSION_GRANTED
+        if (testEvents != null) {
+            true
+        } else {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CALENDAR,
+            ) == PackageManager.PERMISSION_GRANTED
+        }
     }
-    val actualLoadEvent = loadEvent ?: { queryNextCalendarEvent(context, nowMillis()) }
+    val actualLoadEvent = loadEvent ?: {
+        if (testEvents != null) {
+            val filtered = filterCalendarEvents(testEvents, isWorkHours, workCalendarIds)
+            selectNextEvent(filtered, nowMillis())
+        } else {
+            queryNextCalendarEvent(context, nowMillis(), isWorkHours, workCalendarIds)
+        }
+    }
 
     var permissionAttempt by remember { mutableIntStateOf(0) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {

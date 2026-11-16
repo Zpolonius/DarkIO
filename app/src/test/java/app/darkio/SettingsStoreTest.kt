@@ -7,14 +7,24 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.darkio.dashboard.DEFAULT_STEP_GOAL
 import app.darkio.data.AccentChoice
+import app.darkio.data.DEFAULT_WORK_DAYS
+import app.darkio.data.DEFAULT_WORK_END_MINUTES
+import app.darkio.data.DEFAULT_WORK_START_MINUTES
 import app.darkio.data.HomeCard
 import app.darkio.data.Settings
-import app.darkio.data.updateSettings
+import app.darkio.data.markWorkRowSeeded
 import app.darkio.data.settings
+import app.darkio.data.updateSettings
+import app.darkio.data.workRowSeeded
 import java.io.File
+import java.time.DayOfWeek
+import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -34,6 +44,12 @@ class SettingsStoreTest {
         assertEquals(DEFAULT_STEP_GOAL, s.stepGoal)
         assertEquals(10_000L, s.stepGoal)
         assertEquals(80, s.scrimTop)
+        assertEquals(DEFAULT_WORK_DAYS, s.workDays)
+        assertEquals(DEFAULT_WORK_START_MINUTES, s.workStartMinutes)
+        assertEquals(DEFAULT_WORK_END_MINUTES, s.workEndMinutes)
+        org.junit.Assert.assertNull(s.workEndOverrideDate)
+        assertEquals(emptySet<Long>(), s.workCalendarIds)
+        org.junit.Assert.assertNull(s.workZenRuleId)
     }
 
     @Test
@@ -103,5 +119,38 @@ class SettingsStoreTest {
         assertEquals(HomeCard.entries.toSet() - HomeCard.Focus, s.cards)
         assertEquals(12_500L, s.stepGoal)
         assertEquals(80, s.scrimTop)
+        assertEquals(DEFAULT_WORK_DAYS, s.workDays)
+        assertEquals(emptySet<Long>(), s.workCalendarIds)
+    }
+
+    @Test
+    fun workSettingsSaveAndReadRoundTrips() = runBlocking {
+        val store = store()
+        val customDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)
+        val overrideDate = LocalDate.of(2026, 11, 16)
+        val custom = Settings(
+            workDays = customDays,
+            workStartMinutes = 540, // 09:00
+            workEndMinutes = 1020, // 17:00
+            workEndOverrideDate = overrideDate,
+            workCalendarIds = setOf(42L, 99L),
+            workZenRuleId = "rule-123",
+        )
+        store.updateSettings { custom }
+        val read = store.settings().first()
+        assertEquals(customDays, read.workDays)
+        assertEquals(540, read.workStartMinutes)
+        assertEquals(1020, read.workEndMinutes)
+        assertEquals(overrideDate, read.workEndOverrideDate)
+        assertEquals(setOf(42L, 99L), read.workCalendarIds)
+        assertEquals("rule-123", read.workZenRuleId)
+    }
+
+    @Test
+    fun workRowSeededFlagPersistence() = runBlocking<Unit> {
+        val store = store()
+        assertFalse("Som standard er workRowSeeded false", store.workRowSeeded().first())
+        store.markWorkRowSeeded()
+        assertTrue("Efter markWorkRowSeeded er workRowSeeded true", store.workRowSeeded().first())
     }
 }

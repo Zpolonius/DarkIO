@@ -22,16 +22,25 @@ import androidx.lifecycle.lifecycleScope
 import app.darkio.data.AppDatabase
 import app.darkio.data.AppRepository
 import app.darkio.data.darkIoPrefs
+import app.darkio.data.ensureFyraftenZenRule
 import app.darkio.data.expandNotificationPanel
 import app.darkio.data.hintSeen
-import app.darkio.data.Settings
+import app.darkio.data.isNotificationPolicyAccessGranted
+import app.darkio.data.isWorkHours
 import app.darkio.data.markHintSeen
+import app.darkio.data.markWorkRowSeeded
 import app.darkio.data.resetPreferences
+import app.darkio.data.setFyraftenZenRuleActive
+import app.darkio.data.Settings
 import app.darkio.data.updateSettings
+import app.darkio.data.workRowSeeded
+import app.darkio.data.workShortcutsSeed
 import app.darkio.data.settings as settingsFlow
 import app.darkio.ui.theme.DarkIOColors
 import app.darkio.home.HomeScreen
+import java.time.ZonedDateTime
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -62,7 +71,25 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             darkIoPrefs.settingsFlow().collect {
                 DarkIOColors.Accent = it.accent.color
+                val prev = settings
                 settings = it
+                if (prev == null) {
+                    checkZenRuleOnResume(it)
+                }
+            }
+        }
+        // Seeder arbejdsrækken én gang når apps er indlæst (F23).
+        lifecycleScope.launch(Dispatchers.IO) {
+            combine(darkIoPrefs.workRowSeeded(), apps.lists) { seeded, lists ->
+                seeded to (lists.visible + lists.hidden)
+            }.collect { (seeded, allApps) ->
+                if (!seeded && allApps.isNotEmpty()) {
+                    val seed = workShortcutsSeed(allApps)
+                    if (seed.isNotEmpty()) {
+                        AppDatabase.open(this@MainActivity).choices().setShortcuts(seed, emptyList())
+                    }
+                    darkIoPrefs.markWorkRowSeeded()
+                }
             }
         }
         setContent {
@@ -95,7 +122,35 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 onOpenNotifications = { lifecycleScope.launch(Dispatchers.Default) { expandNotificationPanel(this@MainActivity) } },
+                onFyraftenZenRule = { active ->
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        if (isNotificationPolicyAccessGranted(this@MainActivity)) {
+                            val ruleId = ensureFyraftenZenRule(this@MainActivity, settings?.workZenRuleId)
+                            if (ruleId != null) {
+                                if (ruleId != settings?.workZenRuleId) {
+                                    darkIoPrefs.updateSettings { it.copy(workZenRuleId = ruleId) }
+                                }
+                                setFyraftenZenRuleActive(this@MainActivity, ruleId, active)
+                            }
+                        }
+                    }
+                },
             )
+        }
+    }
+
+    private fun checkZenRuleOnResume(current: Settings) {
+        val now = ZonedDateTime.now()
+        if (isWorkHours(current, now) && isNotificationPolicyAccessGranted(this)) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                val ruleId = current.workZenRuleId ?: ensureFyraftenZenRule(this@MainActivity, null)
+                if (ruleId != null) {
+                    if (ruleId != current.workZenRuleId) {
+                        darkIoPrefs.updateSettings { it.copy(workZenRuleId = ruleId) }
+                    }
+                    setFyraftenZenRuleActive(this@MainActivity, ruleId, false)
+                }
+            }
         }
     }
 
@@ -103,6 +158,11 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.hasCategory(Intent.CATEGORY_HOME)) homeSignal++
+    }
+
+    override fun onResume() {
+        super.onResume()
+        settings?.let { checkZenRuleOnResume(it) }
     }
 
     override fun onStart() {
