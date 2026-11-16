@@ -124,4 +124,28 @@ class StepsUiTest {
         assertFalse(tables.any { it.contains("step", ignoreCase = true) })
         assertFalse(tables.any { it.contains("skridt", ignoreCase = true) })
     }
+
+    @Test
+    fun stepsCardTappingTogglesSourceVisibility() {
+        rule.setContent {
+            StepsCard(
+                hasPermission = { true },
+                loadSteps = { 6_420L },
+                loadSources = { listOf("Fitbit") },
+                goal = 8_000L,
+            )
+        }
+
+        val expectedSource = context.getString(R.string.steps_source_with_origins, "Fitbit")
+        rule.onNodeWithTag("stepsSource").assertDoesNotExist()
+
+        rule.onNodeWithTag("stepsCardContent").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("stepsSource").assertIsDisplayed()
+        rule.onNodeWithText(expectedSource).assertIsDisplayed()
+
+        rule.onNodeWithTag("stepsCardContent").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("stepsSource").assertDoesNotExist()
+    }
 }

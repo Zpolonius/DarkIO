@@ -106,6 +106,8 @@
     <string name="steps_title">skridt</string>
     <string name="steps_grant_access_title">Giv adgang til skridt</string>
     <string name="steps_grant_access_explanation">Viser dagens skridt fra Health Connect. Sundhedsdata bliver på telefonen.</string>
+    <string name="steps_source_default">Kilde: Health Connect</string>
+    <string name="steps_source_with_origins">Kilde: Health Connect (%1$s)</string>
     <string name="calories_title">forbrændt</string>
     <string name="calories_grant_access_title">Giv adgang til forbrændte kalorier</string>
     <string name="calories_grant_access_explanation">Viser forbrændte kalorier fra Health Connect. Sundhedsdata bliver på telefonen.</string>

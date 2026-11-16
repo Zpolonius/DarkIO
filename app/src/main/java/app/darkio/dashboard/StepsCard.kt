@@ -3,6 +3,7 @@ package app.darkio.dashboard
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +16,9 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -51,6 +55,7 @@ const val DEFAULT_STEP_GOAL = 10_000L
 data class StepsData(
     val steps: Long,
     val goal: Long = DEFAULT_STEP_GOAL,
+    val sources: List<String> = emptyList(),
 )
 
 val STEPS_PERMISSIONS: Set<String> = setOf(HealthPermission.getReadPermission(StepsRecord::class))
@@ -83,11 +88,13 @@ suspend fun loadStepsCardState(
     hasAccess: suspend () -> Boolean,
     querySteps: suspend () -> Long,
     goal: Long = DEFAULT_STEP_GOAL,
+    querySources: suspend () -> List<String> = { emptyList() },
 ): CardState<StepsData> {
     if (!hasAccess()) return CardState.NeedsAccess
     return try {
         val steps = querySteps()
-        CardState.Content(StepsData(steps = steps, goal = goal))
+        val sources = querySources()
+        CardState.Content(StepsData(steps = steps, goal = goal, sources = sources))
     } catch (e: CancellationException) {
         throw e
     } catch (_: SecurityException) {
@@ -111,12 +118,23 @@ suspend fun checkStepsPermission(context: Context): Boolean =
         false
     }
 
-/** Henter dagens aggregerede skridt fra Health Connect på Dispatchers.IO (N5: gemmes ikke). */
-suspend fun queryHealthConnectSteps(
+/** Slår appnavn op for en Health Connect-kilde med pakkenavn som fallback. */
+internal fun resolveStepSourceLabel(
+    context: Context,
+    packageName: String,
+): String =
+    runCatching {
+        val pm = context.packageManager
+        val info = pm.getApplicationInfo(packageName, 0)
+        pm.getApplicationLabel(info).toString().takeIf { it.isNotBlank() } ?: packageName
+    }.getOrDefault(packageName)
+
+/** Henter dagens aggregerede skridt og deres datakilder fra Health Connect på Dispatchers.IO (N5: gemmes ikke). */
+suspend fun queryHealthConnectStepsWithSources(
     context: Context,
     now: Instant = Instant.now(),
     zoneId: ZoneId = ZoneId.systemDefault(),
-): Long = withContext(Dispatchers.IO) {
+): Pair<Long, List<String>> = withContext(Dispatchers.IO) {
     val client = HealthConnectClient.getOrCreate(context)
     val (startTime, endTime) = dayStepTimeRange(now, zoneId)
     val response = client.aggregate(
@@ -125,8 +143,20 @@ suspend fun queryHealthConnectSteps(
             timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
         ),
     )
-    response[StepsRecord.COUNT_TOTAL] ?: 0L
+    val steps = response[StepsRecord.COUNT_TOTAL] ?: 0L
+    val sources = response.dataOrigins
+        .map { resolveStepSourceLabel(context, it.packageName) }
+        .distinct()
+        .sorted()
+    steps to sources
 }
+
+/** Henter dagens aggregerede skridt fra Health Connect på Dispatchers.IO (N5: gemmes ikke). */
+suspend fun queryHealthConnectSteps(
+    context: Context,
+    now: Instant = Instant.now(),
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Long = queryHealthConnectStepsWithSources(context, now, zoneId).first
 
 /**
  * Skridtkort til træningssiden (side 1).
@@ -137,6 +167,7 @@ suspend fun queryHealthConnectSteps(
 fun StepsCard(
     modifier: Modifier = Modifier,
     loadSteps: (suspend () -> Long)? = null,
+    loadSources: (suspend () -> List<String>)? = null,
     hasPermission: (suspend () -> Boolean)? = null,
     onGrantAccess: (() -> Unit)? = null,
     goal: Long = DEFAULT_STEP_GOAL,
@@ -146,12 +177,21 @@ fun StepsCard(
 ) {
     val context = LocalContext.current
     var permissionAttempt by remember { mutableIntStateOf(0) }
+    var showSource by rememberSaveable { mutableStateOf(false) }
 
     val actualHasPermission: suspend () -> Boolean = hasPermission ?: {
         checkStepsPermission(context)
     }
-    val actualLoadSteps: suspend () -> Long = loadSteps ?: {
-        queryHealthConnectSteps(context, now(), zoneId)
+    val actualLoadStepsData: suspend () -> Pair<Long, List<String>> = when {
+        loadSteps != null && loadSources != null -> {
+            { loadSteps() to loadSources() }
+        }
+        loadSteps != null -> {
+            { loadSteps() to emptyList() }
+        }
+        else -> {
+            { queryHealthConnectStepsWithSources(context, now(), zoneId) }
+        }
     }
 
     val launcher = rememberLauncherForActivityResult(
@@ -171,10 +211,15 @@ fun StepsCard(
 
     LoadedCard(
         load = {
+            var cachedResult: Pair<Long, List<String>>? = null
+            val getResult: suspend () -> Pair<Long, List<String>> = {
+                cachedResult ?: actualLoadStepsData().also { cachedResult = it }
+            }
             loadStepsCardState(
                 hasAccess = actualHasPermission,
-                querySteps = actualLoadSteps,
+                querySteps = { getResult().first },
                 goal = goal,
+                querySources = { getResult().second },
             )
         },
         modifier = modifier,
@@ -185,7 +230,12 @@ fun StepsCard(
         needsAccessTitle = stringResource(R.string.steps_grant_access_title),
         needsAccessExplanation = stringResource(R.string.steps_grant_access_explanation),
     ) { data ->
-        Column(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(role = Role.Button, onClick = { showSource = !showSource })
+                .testTag("stepsCardContent"),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -211,6 +261,19 @@ fun StepsCard(
                 progress = calculateStepProgress(data.steps, data.goal),
                 modifier = Modifier.testTag("stepsProgressBar"),
             )
+            if (showSource) {
+                Spacer(Modifier.height(DarkIOSpace.S2))
+                val sourceText = if (data.sources.isNotEmpty()) {
+                    stringResource(R.string.steps_source_with_origins, data.sources.joinToString(", "))
+                } else {
+                    stringResource(R.string.steps_source_default)
+                }
+                BasicText(
+                    text = sourceText,
+                    style = DarkIOType.Label.copy(color = DarkIOColors.InkMuted),
+                    modifier = Modifier.testTag("stepsSource"),
+                )
+            }
         }
     }
 }
