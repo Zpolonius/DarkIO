@@ -56,6 +56,9 @@ val DEFAULT_WORK_DAYS: Set<DayOfWeek> = setOf(
 const val DEFAULT_WORK_START_MINUTES: Int = 8 * 60
 const val DEFAULT_WORK_END_MINUTES: Int = 16 * 60
 
+const val DEFAULT_BEDTIME_START_MINUTES: Int = 18 * 60
+const val DEFAULT_BEDTIME_END_MINUTES: Int = 10 * 60
+
 data class Settings(
     val accent: AccentChoice = AccentChoice.Lime,
     val cards: Set<HomeCard> = HomeCard.entries.toSet(),
@@ -68,6 +71,8 @@ data class Settings(
     val workEndOverrideDate: LocalDate? = null,
     val workCalendarIds: Set<Long> = emptySet(),
     val workZenRuleId: String? = null,
+    val bedtimeStartMinutes: Int = DEFAULT_BEDTIME_START_MINUTES,
+    val bedtimeEndMinutes: Int = DEFAULT_BEDTIME_END_MINUTES,
 ) {
     /** Skridtmålet holdes mellem 1.000 og 50.000. */
     fun withStepGoal(goal: Long) = copy(stepGoal = goal.coerceIn(MIN_STEP_GOAL, MAX_STEP_GOAL))
@@ -86,6 +91,8 @@ private val WorkEndMinutesKey = intPreferencesKey("work_end_minutes")
 private val WorkEndOverrideDateKey = stringPreferencesKey("work_end_override_date")
 private val WorkCalendarIdsKey = stringSetPreferencesKey("work_calendar_ids")
 private val WorkZenRuleIdKey = stringPreferencesKey("work_zen_rule_id")
+private val BedtimeStartMinutesKey = intPreferencesKey("bedtime_start_minutes")
+private val BedtimeEndMinutesKey = intPreferencesKey("bedtime_end_minutes")
 val WorkRowSeededKey = booleanPreferencesKey("work_row_seeded")
 
 /** Mangler nøglen (første start, eller ældre installation), er arbejdsrækken ikke seedet endnu. */
@@ -114,6 +121,8 @@ private fun Preferences.toSettings() = Settings(
     },
     workCalendarIds = this[WorkCalendarIdsKey]?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet(),
     workZenRuleId = this[WorkZenRuleIdKey],
+    bedtimeStartMinutes = this[BedtimeStartMinutesKey] ?: DEFAULT_BEDTIME_START_MINUTES,
+    bedtimeEndMinutes = this[BedtimeEndMinutesKey] ?: DEFAULT_BEDTIME_END_MINUTES,
 )
 
 /** Mangler en nøgle (første start, eller ældre installation), gælder standarden: lime, alle kort til, 10.000 skridt, toning 80 %. */
@@ -148,6 +157,8 @@ suspend fun DataStore<Preferences>.updateSettings(change: (Settings) -> Settings
                 p.remove(WorkZenRuleIdKey)
             }
         }
+        if (new.bedtimeStartMinutes != old.bedtimeStartMinutes) p[BedtimeStartMinutesKey] = new.bedtimeStartMinutes
+        if (new.bedtimeEndMinutes != old.bedtimeEndMinutes) p[BedtimeEndMinutesKey] = new.bedtimeEndMinutes
     }
 }
 

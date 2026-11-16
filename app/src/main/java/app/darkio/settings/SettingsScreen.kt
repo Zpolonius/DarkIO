@@ -376,6 +376,62 @@ fun SettingsScreen(
                     },
             )
         }
+        Spacer(Modifier.height(DarkIOSpace.S5))
+        SectionLabel(R.string.settings_bedtime_label)
+        Group {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = DarkIOSize.TouchTarget)
+                    .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                BasicText(
+                    stringResource(R.string.bedtime_start_label),
+                    style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StepButton(R.string.settings_step_minus, R.string.bedtime_start_down_desc, "bedtimeStartMinus") {
+                        onChange { it.copy(bedtimeStartMinutes = (it.bedtimeStartMinutes - 30 + 1440) % 1440) }
+                    }
+                    BasicText(
+                        formatWorkTime(settings.bedtimeStartMinutes),
+                        style = DarkIOType.Data.copy(color = DarkIOColors.Ink),
+                        modifier = Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("bedtimeStartTime"),
+                    )
+                    StepButton(R.string.settings_step_plus, R.string.bedtime_start_up_desc, "bedtimeStartPlus") {
+                        onChange { it.copy(bedtimeStartMinutes = (it.bedtimeStartMinutes + 30) % 1440) }
+                    }
+                }
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = DarkIOSize.TouchTarget)
+                    .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                BasicText(
+                    stringResource(R.string.bedtime_end_label),
+                    style = DarkIOType.Item.copy(color = DarkIOColors.Ink),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StepButton(R.string.settings_step_minus, R.string.bedtime_end_down_desc, "bedtimeEndMinus") {
+                        onChange { it.copy(bedtimeEndMinutes = (it.bedtimeEndMinutes - 30 + 1440) % 1440) }
+                    }
+                    BasicText(
+                        formatWorkTime(settings.bedtimeEndMinutes),
+                        style = DarkIOType.Data.copy(color = DarkIOColors.Ink),
+                        modifier = Modifier.padding(horizontal = DarkIOSpace.S3).widthIn(min = DarkIOSize.IconTile).testTag("bedtimeEndTime"),
+                    )
+                    StepButton(R.string.settings_step_plus, R.string.bedtime_end_up_desc, "bedtimeEndPlus") {
+                        onChange { it.copy(bedtimeEndMinutes = (it.bedtimeEndMinutes + 30) % 1440) }
+                    }
+                }
+            }
+        }
     }
     if (confirmingReset) {
         ResetConfirmationSheet(
