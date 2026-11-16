@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.darkio.dashboard.DEFAULT_STEP_GOAL
 import app.darkio.data.AccentChoice
+import app.darkio.data.DEFAULT_BEDTIME_END_MINUTES
+import app.darkio.data.DEFAULT_BEDTIME_START_MINUTES
 import app.darkio.data.DEFAULT_WORK_DAYS
 import app.darkio.data.DEFAULT_WORK_END_MINUTES
 import app.darkio.data.DEFAULT_WORK_START_MINUTES
@@ -50,12 +52,23 @@ class SettingsStoreTest {
         org.junit.Assert.assertNull(s.workEndOverrideDate)
         assertEquals(emptySet<Long>(), s.workCalendarIds)
         org.junit.Assert.assertNull(s.workZenRuleId)
+        assertEquals(DEFAULT_BEDTIME_START_MINUTES, s.bedtimeStartMinutes)
+        assertEquals(18 * 60, s.bedtimeStartMinutes)
+        assertEquals(DEFAULT_BEDTIME_END_MINUTES, s.bedtimeEndMinutes)
+        assertEquals(10 * 60, s.bedtimeEndMinutes)
     }
 
     @Test
     fun saveThenReadRoundTrips() = runBlocking {
         val store = store()
-        val saved = Settings(AccentChoice.Coral, HomeCard.entries.toSet() - HomeCard.Focus - HomeCard.Steps, 12_500L, 65)
+        val saved = Settings(
+            accent = AccentChoice.Coral,
+            cards = HomeCard.entries.toSet() - HomeCard.Focus - HomeCard.Steps,
+            stepGoal = 12_500L,
+            scrimTop = 65,
+            bedtimeStartMinutes = 20 * 60,
+            bedtimeEndMinutes = 8 * 60,
+        )
         store.updateSettings { saved }
         assertEquals(saved, store.settings().first())
     }
