@@ -90,7 +90,7 @@ object DarkIOSize {
     val LineStroke = 1.dp
     val PageDot = 6.dp
     val PageDotActiveWidth = 20.dp
-    val PageDotHitHeight = 24.dp
+    val PageDotHitHeight = 44.dp
     val CursorWidth = 7.dp
     val CursorHeight = 15.dp
     val ToggleTrackWidth = 52.dp

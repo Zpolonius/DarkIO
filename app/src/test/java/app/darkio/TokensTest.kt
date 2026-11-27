@@ -88,6 +88,24 @@ class TokensTest {
         assertEquals(tokens.getValue("drawer-max-fraction").toFloat(), DarkIOSize.DrawerMaxFraction, 0.0001f)
     }
 
+    @Test
+    fun touchAndPageDotTokensMatch() {
+        val tokens = Regex(""""name":\s*"([a-z-]+)",\s*"value":\s*"([^"]+)"""")
+            .findAll(json.readText()).associate { it.groupValues[1] to it.groupValues[2] }
+
+        assertEquals("44px", tokens["touch-min"])
+        assertEquals("48px", tokens["touch-target"])
+        assertEquals("6px", tokens["page-dot"])
+        assertEquals("20px", tokens["page-dot-active-width"])
+        assertEquals("44px", tokens["page-dot-hit-height"])
+
+        assertEquals(44.dp, DarkIOSize.TouchMin)
+        assertEquals(48.dp, DarkIOSize.TouchTarget)
+        assertEquals(6.dp, DarkIOSize.PageDot)
+        assertEquals(20.dp, DarkIOSize.PageDotActiveWidth)
+        assertEquals(44.dp, DarkIOSize.PageDotHitHeight)
+    }
+
     private fun parse(v: String): Color =
         if (v.startsWith("#")) Color(0xFF000000 or v.drop(1).toLong(16))
         else v.substringAfter("(").substringBefore(")").split(",").map { it.trim() }.let { (r, g, b, a) ->

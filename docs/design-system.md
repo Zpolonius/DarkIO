@@ -61,7 +61,7 @@ Hjemskærmen har tre sider med hver sit fokus: **i dag** (ur, aftale, fokus, tip
 
 - Nederst på side 1 og 2, i samme rækkefølge: sideprikker, en række med 4 genveje der hører til siden, en fast dock med 4 favoritter (`surface-glass`, `radius-xl`-agtigt 24px hjørne) og søgefeltet. På side 3 (byg) skjules genvejsrækken, så der er plads til AI-kortene i tommelfingerzonen.
 - Docken og søgefeltet flytter sig aldrig. Kun genvejsrækken og indholdet over den skifter.
-- Sideprikker: aktiv side er en 20 × 6 pille i `accent`, andre er 6 × 6 i `line-strong`; hver prik har en 44 × 24 trykflade.
+- Sideprikker: aktiv side er en 20 × 6 pille i `accent`, andre er 6 × 6 i `line-strong`; hver prik har en 44 × 44 trykflade.
 - Højst tre sider. En fjerde side er en swipe mere til det, du skal bruge.
 
 ### 1a · Hjem: i dag i arbejdstid
@@ -97,7 +97,7 @@ Hjemskærmen viser brugerens egen baggrund, fx et familiebillede. Android tegner
 - Sidemargin `space-5` (20) på hjem, `space-4` (16) i skuffe og indstillinger. Første indhold starter ved `top-inset` (60).
 - Appen tegner edge-to-edge (krav i Android 16). Alt trykbart holder sig over navigationsgesture-zonen (`WindowInsets.systemGestures`), og swipe op til skuffen starter over den.
 - Kort står i lodret stak med `space-2`–`space-3` imellem. Gitre er 4 kolonner.
-- Trykflader er mindst `touch-min`. Brug 48dp, hvor der er plads.
+- Trykflader er mindst 44 dp (`touch-min`) for alt trykbart, og 48 dp eller mere (`touch-target`) for kategori-bar, dock, genvejsrækker og søgefelt.
 
 ## Ikonografi
 

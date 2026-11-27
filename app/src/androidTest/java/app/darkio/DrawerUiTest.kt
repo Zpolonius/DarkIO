@@ -15,7 +15,6 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeUp
-import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
@@ -118,7 +117,7 @@ class DrawerUiTest {
     fun categoryButtonsAreAtLeast48DpAndHaveTalkBackLabels() {
         show()
         rule.onNodeWithTag("homePager").performTouchInput { swipeUp() }
-        val minPx = with(rule.density) { 48.dp.toPx() } - 0.5f
+        val minPx = with(rule.density) { DarkIOSize.TouchTarget.toPx() } - 0.5f
         listOf(R.string.category_all, R.string.category_social, R.string.category_game, R.string.category_photo, R.string.category_work, R.string.category_tool, R.string.category_other)
             .map { context.getString(it) }.forEach { label ->
                 val bounds = rule.onNodeWithContentDescription(label).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
