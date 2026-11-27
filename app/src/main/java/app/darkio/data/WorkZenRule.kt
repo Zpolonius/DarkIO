@@ -2,14 +2,22 @@ package app.darkio.data
 
 import android.app.AutomaticZenRule
 import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
 import android.service.notification.Condition
+import androidx.core.net.toUri
+import app.darkio.WorkHoursConfigActivity
 
 const val FYRAFTEN_RULE_NAME = "Fyraften"
 const val FYRAFTEN_CONDITION_URI_STRING = "darkio://zen/fyraften"
+
+internal data class ZenRuleInfo(
+    val id: String,
+    val name: String?,
+    val hasExpectedConfigurationActivity: Boolean,
+)
 
 /**
  * Ren beslutningsfunktion for fyraften AutomaticZenRule:
@@ -38,57 +46,120 @@ fun isNotificationPolicyAccessGranted(context: Context): Boolean {
 /**
  * Finder eksisterende eller opretter ny "Fyraften" AutomaticZenRule.
  * Tjekker altid [NotificationManager.isNotificationPolicyAccessGranted] først.
+ * Sikrer at [AutomaticZenRule.getConfigurationActivity] peger på [WorkHoursConfigActivity],
+ * så reglen kan oprettes og redigeres i Androids indstillinger.
  * Returnerer regel-id eller null hvis tilladelse mangler eller oprettelse fejler.
  */
 fun ensureFyraftenZenRule(context: Context, existingId: String?): String? {
     val nm = context.getSystemService(NotificationManager::class.java) ?: return null
-    if (!nm.isNotificationPolicyAccessGranted) return null
+    val configComponent = ComponentName(context, WorkHoursConfigActivity::class.java)
+    return ensureFyraftenZenRuleWith(
+        existingId = existingId,
+        hasPolicyAccess = { nm.isNotificationPolicyAccessGranted },
+        getRule = { id ->
+            nm.getAutomaticZenRule(id)?.let { rule ->
+                ZenRuleInfo(
+                    id = id,
+                    name = rule.name,
+                    hasExpectedConfigurationActivity = rule.configurationActivity == configComponent,
+                )
+            }
+        },
+        listRules = {
+            nm.automaticZenRules.entries.map { (id, rule) ->
+                ZenRuleInfo(
+                    id = id,
+                    name = rule.name,
+                    hasExpectedConfigurationActivity = rule.configurationActivity == configComponent,
+                )
+            }
+        },
+        updateRuleConfigurationActivity = { id ->
+            val existing = nm.getAutomaticZenRule(id) ?: return@ensureFyraftenZenRuleWith false
+            existing.configurationActivity = configComponent
+            nm.updateAutomaticZenRule(id, existing)
+        },
+        createRuleWithConfigurationActivity = {
+            val rule = AutomaticZenRule.Builder(
+                FYRAFTEN_RULE_NAME,
+                FYRAFTEN_CONDITION_URI_STRING.toUri(),
+            )
+                .setConfigurationActivity(configComponent)
+                .setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+                .setEnabled(true)
+                .setManualInvocationAllowed(true)
+                .build()
+            nm.addAutomaticZenRule(rule)
+        },
+    )
+}
 
+internal fun ensureFyraftenZenRuleWith(
+    existingId: String?,
+    hasPolicyAccess: () -> Boolean,
+    getRule: (String) -> ZenRuleInfo?,
+    listRules: () -> List<ZenRuleInfo>,
+    updateRuleConfigurationActivity: (String) -> Boolean,
+    createRuleWithConfigurationActivity: () -> String?,
+): String? {
+    if (!hasPolicyAccess()) return null
+
+    var failedUpdateId: String? = null
     if (existingId != null) {
-        try {
-            val rule = nm.getAutomaticZenRule(existingId)
-            if (rule != null && rule.name == FYRAFTEN_RULE_NAME) {
+        val existing = runCatching { getRule(existingId) }.getOrNull()
+        if (existing != null && existing.name == FYRAFTEN_RULE_NAME) {
+            if (existing.hasExpectedConfigurationActivity) return existingId
+            if (runCatching { updateRuleConfigurationActivity(existingId) }.getOrDefault(false)) {
                 return existingId
             }
-        } catch (_: Throwable) {}
-    }
-
-    try {
-        val existingEntry = nm.automaticZenRules.entries.firstOrNull { it.value.name == FYRAFTEN_RULE_NAME }
-        if (existingEntry != null) {
-            return existingEntry.key
+            failedUpdateId = existingId
         }
-    } catch (_: Throwable) {}
-
-    return try {
-        val rule = AutomaticZenRule(
-            FYRAFTEN_RULE_NAME,
-            null,
-            null,
-            Uri.parse(FYRAFTEN_CONDITION_URI_STRING),
-            null,
-            NotificationManager.INTERRUPTION_FILTER_PRIORITY,
-            true,
-        )
-        nm.addAutomaticZenRule(rule)
-    } catch (_: Throwable) {
-        null
     }
+
+    val candidate = runCatching { listRules() }.getOrNull()
+        ?.firstOrNull { it.name == FYRAFTEN_RULE_NAME && it.id != failedUpdateId }
+    if (candidate != null) {
+        if (candidate.hasExpectedConfigurationActivity) return candidate.id
+        if (runCatching { updateRuleConfigurationActivity(candidate.id) }.getOrDefault(false)) {
+            return candidate.id
+        }
+    }
+
+    return runCatching { createRuleWithConfigurationActivity() }.getOrNull()
 }
 
 /**
  * Sætter tilstanden på Fyraften AutomaticZenRule (aktiv eller inaktiv).
  * Tjekker altid [NotificationManager.isNotificationPolicyAccessGranted] først.
+ * Returnerer `true` ved succes, `false` hvis tilladelse mangler eller kaldet fejler.
  */
-fun setFyraftenZenRuleActive(context: Context, ruleId: String, active: Boolean) {
-    val nm = context.getSystemService(NotificationManager::class.java) ?: return
-    if (!nm.isNotificationPolicyAccessGranted) return
+fun setFyraftenZenRuleActive(context: Context, ruleId: String, active: Boolean): Boolean {
+    val nm = context.getSystemService(NotificationManager::class.java) ?: return false
+    return setFyraftenZenRuleActiveWith(
+        ruleId = ruleId,
+        active = active,
+        hasPolicyAccess = { nm.isNotificationPolicyAccessGranted },
+        setRuleState = { id, isActive ->
+            val state = if (isActive) Condition.STATE_TRUE else Condition.STATE_FALSE
+            val condition = Condition(FYRAFTEN_CONDITION_URI_STRING.toUri(), FYRAFTEN_RULE_NAME, state)
+            nm.setAutomaticZenRuleState(id, condition)
+        },
+    )
+}
 
-    val state = if (active) Condition.STATE_TRUE else Condition.STATE_FALSE
-    val condition = Condition(Uri.parse(FYRAFTEN_CONDITION_URI_STRING), FYRAFTEN_RULE_NAME, state)
-    try {
-        nm.setAutomaticZenRuleState(ruleId, condition)
-    } catch (_: Throwable) {}
+internal fun setFyraftenZenRuleActiveWith(
+    ruleId: String,
+    active: Boolean,
+    hasPolicyAccess: () -> Boolean,
+    setRuleState: (String, Boolean) -> Unit,
+): Boolean {
+    if (!hasPolicyAccess()) return false
+    return try {
+        setRuleState(ruleId, active)
+        true
+    } catch (_: Throwable) {
+        false
+    }
 }
 
 /**

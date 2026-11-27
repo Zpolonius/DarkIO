@@ -1,21 +1,34 @@
 package app.darkio
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import app.darkio.dashboard.CalendarEvent
 import app.darkio.dashboard.filterCalendarEvents
 import app.darkio.data.AppEntry
 import app.darkio.data.DEFAULT_WORK_DAYS
 import app.darkio.data.DEFAULT_WORK_END_MINUTES
 import app.darkio.data.DEFAULT_WORK_START_MINUTES
+import app.darkio.data.FYRAFTEN_RULE_NAME
 import app.darkio.data.PageShortcut
 import app.darkio.data.Settings
 import app.darkio.data.WORK_SHORTCUTS_PAGE
+import app.darkio.data.ZenRuleInfo
 import app.darkio.data.desiredZenRuleActive
+import app.darkio.data.ensureFyraftenZenRuleWith
 import app.darkio.data.isWorkHours
+import app.darkio.data.setFyraftenZenRuleActiveWith
+import app.darkio.data.settings
+import app.darkio.data.updateSettings
 import app.darkio.data.workShortcutsSeed
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -244,5 +257,192 @@ class WorkHoursTest {
         val filtered = filterCalendarEvents(events, isWorkHours = false, workCalendarIds)
         assertEquals(2, filtered.size)
         assertEquals(listOf("Tandlæge", "Fødselsdag"), filtered.map { it.title })
+    }
+
+    // --- 5. ensureFyraftenZenRule / setFyraftenZenRuleActive tests ---
+
+    @Test
+    fun ensureFyraftenZenRuleReturnsNullWithoutPolicyAccess() {
+        var created = false
+        val result = ensureFyraftenZenRuleWith(
+            existingId = "old-id",
+            hasPolicyAccess = { false },
+            getRule = { null },
+            listRules = { emptyList() },
+            updateRuleConfigurationActivity = { false },
+            createRuleWithConfigurationActivity = {
+                created = true
+                "new-id"
+            },
+        )
+        assertNull(result)
+        assertFalse(created)
+    }
+
+    @Test
+    fun ensureFyraftenZenRuleCreatesRuleWithConfigActivityWhenMissing() {
+        var created = false
+        val result = ensureFyraftenZenRuleWith(
+            existingId = null,
+            hasPolicyAccess = { true },
+            getRule = { null },
+            listRules = { emptyList() },
+            updateRuleConfigurationActivity = { false },
+            createRuleWithConfigurationActivity = {
+                created = true
+                "created-rule-1"
+            },
+        )
+        assertTrue(created)
+        assertEquals("created-rule-1", result)
+    }
+
+    @Test
+    fun ensureFyraftenZenRuleReplacesStaleIdWhenRuleNoLongerExists() {
+        var created = false
+        val result = ensureFyraftenZenRuleWith(
+            existingId = "stale-id",
+            hasPolicyAccess = { true },
+            getRule = { null },
+            listRules = { emptyList() },
+            updateRuleConfigurationActivity = { false },
+            createRuleWithConfigurationActivity = {
+                created = true
+                "fresh-rule-2"
+            },
+        )
+        assertTrue(created)
+        assertEquals("fresh-rule-2", result)
+    }
+
+    @Test
+    fun ensureFyraftenZenRuleUpdatesLegacyRuleMissingConfigActivity() {
+        var updatedId: String? = null
+        var created = false
+        val legacyRule = ZenRuleInfo(
+            id = "legacy-id",
+            name = FYRAFTEN_RULE_NAME,
+            hasExpectedConfigurationActivity = false,
+        )
+        val result = ensureFyraftenZenRuleWith(
+            existingId = "legacy-id",
+            hasPolicyAccess = { true },
+            getRule = { if (it == "legacy-id") legacyRule else null },
+            listRules = { listOf(legacyRule) },
+            updateRuleConfigurationActivity = { id ->
+                updatedId = id
+                true
+            },
+            createRuleWithConfigurationActivity = {
+                created = true
+                "new-id"
+            },
+        )
+        assertEquals("legacy-id", updatedId)
+        assertFalse(created)
+        assertEquals("legacy-id", result)
+    }
+
+    @Test
+    fun ensureFyraftenZenRuleCreatesNewRuleIfLegacyUpdateFails() {
+        var updateAttempts = 0
+        var created = false
+        val legacyRule = ZenRuleInfo(
+            id = "legacy-id",
+            name = FYRAFTEN_RULE_NAME,
+            hasExpectedConfigurationActivity = false,
+        )
+        val result = ensureFyraftenZenRuleWith(
+            existingId = "legacy-id",
+            hasPolicyAccess = { true },
+            getRule = { if (it == "legacy-id") legacyRule else null },
+            listRules = { listOf(legacyRule) },
+            updateRuleConfigurationActivity = {
+                updateAttempts++
+                false
+            },
+            createRuleWithConfigurationActivity = {
+                created = true
+                "replacement-id"
+            },
+        )
+        assertEquals(1, updateAttempts)
+        assertTrue(created)
+        assertEquals("replacement-id", result)
+    }
+
+    @Test
+    fun ensureFyraftenZenRuleReturnsNullWhenRuleCreationFails() {
+        val result = ensureFyraftenZenRuleWith(
+            existingId = null,
+            hasPolicyAccess = { true },
+            getRule = { null },
+            listRules = { emptyList() },
+            updateRuleConfigurationActivity = { false },
+            createRuleWithConfigurationActivity = { throw IllegalArgumentException("missing config activity") },
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun setFyraftenZenRuleActiveReturnsTrueOnSuccessAndFalseOnFailure() {
+        var recordedState: Pair<String, Boolean>? = null
+        val success = setFyraftenZenRuleActiveWith(
+            ruleId = "rule-1",
+            active = true,
+            hasPolicyAccess = { true },
+            setRuleState = { id, active -> recordedState = id to active },
+        )
+        assertTrue(success)
+        assertEquals("rule-1" to true, recordedState)
+
+        val noPermission = setFyraftenZenRuleActiveWith(
+            ruleId = "rule-1",
+            active = true,
+            hasPolicyAccess = { false },
+            setRuleState = { _, _ -> },
+        )
+        assertFalse(noPermission)
+
+        val failure = setFyraftenZenRuleActiveWith(
+            ruleId = "rule-1",
+            active = false,
+            hasPolicyAccess = { true },
+            setRuleState = { _, _ -> throw SecurityException("denied") },
+        )
+        assertFalse(failure)
+    }
+
+    private fun inMemoryPreferencesStore(): DataStore<Preferences> {
+        val state = MutableStateFlow(emptyPreferences())
+        return object : DataStore<Preferences> {
+            override val data: Flow<Preferences> = state
+            override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
+                val updated = transform(state.value)
+                state.value = updated
+                return updated
+            }
+        }
+    }
+
+    @Test
+    fun updatingWorkZenRuleIdPreservesWorkHoursDaysAndCalendars() = runBlocking {
+        val customDays = setOf(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY)
+        val initial = Settings(
+            workDays = customDays,
+            workStartMinutes = 9 * 60,
+            workEndMinutes = 17 * 60 + 30,
+            workCalendarIds = setOf(10L, 20L),
+            workZenRuleId = "stale-id",
+        )
+        val store = inMemoryPreferencesStore()
+        store.updateSettings { initial }
+        store.updateSettings { it.copy(workZenRuleId = "fresh-id") }
+        val updated = store.settings().first()
+        assertEquals("fresh-id", updated.workZenRuleId)
+        assertEquals(customDays, updated.workDays)
+        assertEquals(9 * 60, updated.workStartMinutes)
+        assertEquals(17 * 60 + 30, updated.workEndMinutes)
+        assertEquals(setOf(10L, 20L), updated.workCalendarIds)
     }
 }

@@ -3,12 +3,14 @@ package app.darkio
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.dashboard.CalendarEvent
 import app.darkio.dashboard.DeviceCalendar
 import app.darkio.data.AppEntry
@@ -207,13 +209,17 @@ class WorkHoursUiTest {
                 settings = currentSettings,
                 onSettingsChange = { change -> currentSettings = change(currentSettings) },
                 nowProvider = { wednesday10am },
-                onFyraftenZenRule = { active -> zenRuleInvoked = active },
+                onFyraftenZenRule = { active ->
+                    zenRuleInvoked = active
+                    true
+                },
             )
         }
 
         // Before click: work mode
         rule.onNodeWithTag("workHoursBadge").assertExists()
         rule.onNodeWithTag("fyraftenButton").assertExists()
+        rule.onNodeWithTag("fyraftenError").assertDoesNotExist()
         rule.onNodeWithContentDescription("WorkApp").assertExists()
 
         // Tap Fyraften
@@ -224,10 +230,52 @@ class WorkHoursUiTest {
         assertTrue(zenRuleInvoked)
         assertEquals(wednesday10am.toLocalDate(), currentSettings.workEndOverrideDate)
 
-        // After click: personal mode immediately
+        // After click: personal mode immediately, no error shown
         rule.onNodeWithTag("workHoursBadge").assertDoesNotExist()
         rule.onNodeWithTag("fyraftenButton").assertDoesNotExist()
+        rule.onNodeWithTag("fyraftenError").assertDoesNotExist()
         rule.onNodeWithContentDescription("PersonalApp").assertExists()
         rule.onNodeWithContentDescription("WorkApp").assertDoesNotExist()
+    }
+
+    @Test
+    fun testTappingFyraftenShowsErrorWhenZenRuleFails() {
+        val wednesday10am = ZonedDateTime.of(2026, 11, 18, 10, 0, 0, 0, ZoneId.of("Europe/Copenhagen"))
+        var currentSettings by mutableStateOf(Settings(workCalendarIds = setOf(101L), cards = setOf(HomeCard.Calendar)))
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+        val personalApp = AppEntry("personal/A#0", "PersonalApp")
+        val workApp = AppEntry("work/B#0", "WorkApp")
+        val appLists = splitApps(listOf(personalApp, workApp), emptySet()).copy(
+            shortcutSlots = mapOf(
+                0 to mapOf(personalApp.id to 0),
+                WORK_SHORTCUTS_PAGE to mapOf(workApp.id to 0),
+            ),
+        )
+
+        rule.setContent {
+            HomeScreen(
+                apps = appLists,
+                hintSeen = true,
+                onHintSeen = {},
+                onLaunch = {},
+                onSetHidden = { _, _ -> },
+                onSetFavorites = {},
+                onSetCategory = { _, _ -> },
+                onAppInfo = {},
+                onUninstall = {},
+                settings = currentSettings,
+                onSettingsChange = { change -> currentSettings = change(currentSettings) },
+                nowProvider = { wednesday10am },
+                onFyraftenZenRule = { false },
+            )
+        }
+
+        rule.onNodeWithTag("fyraftenError").assertDoesNotExist()
+        rule.onNodeWithTag("fyraftenButton").performClick()
+        rule.waitForIdle()
+
+        rule.onNodeWithTag("fyraftenError").assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.work_fyraften_error)).assertIsDisplayed()
     }
 }

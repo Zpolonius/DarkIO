@@ -35,6 +35,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -69,6 +72,7 @@ import app.darkio.data.HomeCard
 import app.darkio.data.SCRIM_TOP_STEP
 import app.darkio.data.STEP_GOAL_STEP
 import app.darkio.data.Settings
+import app.darkio.data.ensureFyraftenZenRule
 import app.darkio.data.formatWorkTime
 import app.darkio.data.isNotificationPolicyAccessGranted
 import app.darkio.data.openFyraftenRuleSettings
@@ -79,7 +83,9 @@ import app.darkio.ui.theme.DarkIOSize
 import app.darkio.ui.theme.DarkIOSpace
 import app.darkio.ui.theme.DarkIOType
 import java.time.DayOfWeek
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Indstillinger (F13): accentfarve, kort til/fra, skridtmål og links. Ændringer gælder med det samme via [onChange].
@@ -95,11 +101,20 @@ fun SettingsScreen(
     onResetAll: () -> Unit = {},
     requestAccess: ((HomeCard) -> Unit)? = null,
     calendarsOverride: List<DeviceCalendar>? = null,
+    scrollToWorkHours: Boolean = false,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+    var workHoursY by remember { mutableIntStateOf(0) }
     val request = requestAccess ?: rememberAccessRequester()
     var confirmingReset by rememberSaveable { mutableStateOf(false) }
     var deviceCalendars by remember { mutableStateOf<List<DeviceCalendar>?>(calendarsOverride) }
+    LaunchedEffect(scrollToWorkHours, workHoursY) {
+        if (scrollToWorkHours && workHoursY > 0) {
+            scrollState.scrollTo(workHoursY)
+        }
+    }
     LaunchedEffect(calendarsOverride) {
         if (calendarsOverride != null) {
             deviceCalendars = calendarsOverride
@@ -117,7 +132,7 @@ fun SettingsScreen(
         Modifier
             .fillMaxSize()
             .background(DarkIOColors.Bg)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(start = DarkIOSpace.S4, end = DarkIOSpace.S4, top = DarkIOSpace.TopInset, bottom = DarkIOSpace.S5),
     ) {
         BasicText(stringResource(R.string.settings_title), style = DarkIOType.Title.copy(color = DarkIOColors.Ink))
@@ -210,7 +225,10 @@ fun SettingsScreen(
             )
         }
         Spacer(Modifier.height(DarkIOSpace.S5))
-        SectionLabel(R.string.settings_work_hours_label)
+        SectionLabel(
+            R.string.settings_work_hours_label,
+            Modifier.onGloballyPositioned { workHoursY = it.positionInParent().y.toInt() },
+        )
         Group {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = DarkIOSize.TouchTarget).padding(horizontal = DarkIOSpace.S4),
@@ -368,10 +386,22 @@ fun SettingsScreen(
                 modifier = Modifier
                     .testTag("link_work_zen_rule")
                     .clickable(role = Role.Button) {
-                        if (isNotificationPolicyAccessGranted(context)) {
-                            openFyraftenRuleSettings(context, settings.workZenRuleId)
-                        } else {
-                            openNotificationPolicyAccessSettings(context)
+                        scope.launch {
+                            val (granted, ruleId) = withContext(Dispatchers.IO) {
+                                if (isNotificationPolicyAccessGranted(context)) {
+                                    true to ensureFyraftenZenRule(context, settings.workZenRuleId)
+                                } else {
+                                    false to null
+                                }
+                            }
+                            if (granted) {
+                                if (ruleId != null && ruleId != settings.workZenRuleId) {
+                                    onChange { it.copy(workZenRuleId = ruleId) }
+                                }
+                                openFyraftenRuleSettings(context, ruleId)
+                            } else {
+                                openNotificationPolicyAccessSettings(context)
+                            }
                         }
                     },
             )
@@ -446,8 +476,8 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SectionLabel(res: Int) {
-    BasicText(stringResource(res), style = DarkIOType.Label.copy(color = DarkIOColors.InkMuted))
+private fun SectionLabel(res: Int, modifier: Modifier = Modifier) {
+    BasicText(stringResource(res), modifier = modifier, style = DarkIOType.Label.copy(color = DarkIOColors.InkMuted))
     Spacer(Modifier.height(DarkIOSpace.S3))
 }
 
