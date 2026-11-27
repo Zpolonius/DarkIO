@@ -103,9 +103,12 @@ class HomeAndManifestTest {
                 "app.darkio.MainActivity",
                 "app.darkio.HealthRationaleActivity",
                 "app.darkio.ViewPermissionUsageActivity",
+                "app.darkio.WorkHoursConfigActivity",
             ),
             exported.toSet(),
         )
+        val configActivity = info.activities.orEmpty().first { it.name == "app.darkio.WorkHoursConfigActivity" }
+        assertEquals("android.permission.MANAGE_NOTIFICATIONS", configActivity.permission)
     }
 
     @Test

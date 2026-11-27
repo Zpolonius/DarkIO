@@ -41,11 +41,14 @@ import app.darkio.home.HomeScreen
 import java.time.ZonedDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private lateinit var apps: AppRepository
     private var homeSignal by mutableIntStateOf(0)
+    private var openWorkHoursSignal by mutableIntStateOf(0)
     private var settings by mutableStateOf<Settings?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +69,9 @@ class MainActivity : ComponentActivity() {
         // Mørk tone bag systemlinjerne, så ikoner er lyse også når systemet er i lyst tema (N8).
         enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
+        if (intent.getBooleanExtra(EXTRA_OPEN_WORK_HOURS, false)) {
+            openWorkHoursSignal++
+        }
         apps = AppRepository(this, lifecycleScope, AppDatabase.open(this).choices())
         // Accent og kort sættes, før første billede tegnes (indtil da vises kun bg).
         lifecycleScope.launch {
@@ -114,6 +120,7 @@ class MainActivity : ComponentActivity() {
                 onAppInfo = apps::openAppInfo,
                 onUninstall = apps::uninstall,
                 homeSignal = homeSignal,
+                openWorkHoursSignal = openWorkHoursSignal,
                 settings = current,
                 onSettingsChange = { lifecycleScope.launch { darkIoPrefs.updateSettings(it) } },
                 onResetAll = {
@@ -124,11 +131,16 @@ class MainActivity : ComponentActivity() {
                 },
                 onOpenNotifications = { lifecycleScope.launch(Dispatchers.Default) { expandNotificationPanel(this@MainActivity) } },
                 onFyraftenZenRule = { active ->
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        if (isNotificationPolicyAccessGranted(this@MainActivity)) {
-                            val ruleId = ensureFyraftenZenRule(this@MainActivity, settings?.workZenRuleId)
-                            if (ruleId != null) {
-                                if (ruleId != settings?.workZenRuleId) {
+                    withContext(Dispatchers.IO) {
+                        if (!isNotificationPolicyAccessGranted(this@MainActivity)) {
+                            false
+                        } else {
+                            val storedId = darkIoPrefs.settingsFlow().first().workZenRuleId
+                            val ruleId = ensureFyraftenZenRule(this@MainActivity, storedId)
+                            if (ruleId == null) {
+                                false
+                            } else {
+                                if (ruleId != storedId) {
                                     darkIoPrefs.updateSettings { it.copy(workZenRuleId = ruleId) }
                                 }
                                 setFyraftenZenRuleActive(this@MainActivity, ruleId, active)
@@ -142,9 +154,10 @@ class MainActivity : ComponentActivity() {
 
     private fun checkZenRuleOnResume(current: Settings) {
         val now = ZonedDateTime.now()
-        if (isWorkHours(current, now) && isNotificationPolicyAccessGranted(this)) {
+        if (isWorkHours(current, now)) {
             lifecycleScope.launch(Dispatchers.IO) {
-                val ruleId = current.workZenRuleId ?: ensureFyraftenZenRule(this@MainActivity, null)
+                if (!isNotificationPolicyAccessGranted(this@MainActivity)) return@launch
+                val ruleId = ensureFyraftenZenRule(this@MainActivity, current.workZenRuleId)
                 if (ruleId != null) {
                     if (ruleId != current.workZenRuleId) {
                         darkIoPrefs.updateSettings { it.copy(workZenRuleId = ruleId) }
@@ -158,7 +171,11 @@ class MainActivity : ComponentActivity() {
     // Hjem-knappen på en kørende launcher leverer ny intent (singleTask): vis side 1.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.hasCategory(Intent.CATEGORY_HOME)) homeSignal++
+        if (intent.getBooleanExtra(EXTRA_OPEN_WORK_HOURS, false)) {
+            openWorkHoursSignal++
+        } else if (intent.hasCategory(Intent.CATEGORY_HOME)) {
+            homeSignal++
+        }
     }
 
     override fun onResume() {

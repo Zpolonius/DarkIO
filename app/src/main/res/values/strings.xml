@@ -24,6 +24,7 @@
     <string name="settings_work_zen_rule">Tilstand Fyraften</string>
     <string name="work_hours_badge">arbejdstid</string>
     <string name="work_fyraften_button">Fyraften</string>
+    <string name="work_fyraften_error">Kunne ikke aktivere Fyraften-tilstand. Tjek Forstyr ikke-adgang i Indstillinger.</string>
     <string name="work_day_mon">man</string>
     <string name="work_day_tue">tir</string>
     <string name="work_day_wed">ons</string>

@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import app.darkio.R
 import app.darkio.dashboard.ActivityGridCard
@@ -121,6 +122,7 @@ fun HomeScreen(
     onAppInfo: (AppEntry) -> Unit,
     onUninstall: (AppEntry) -> Unit,
     homeSignal: Int = 0,
+    openWorkHoursSignal: Int = 0,
     onSetShortcuts: (page: Int, changes: List<Pair<AppEntry, Int?>>) -> Unit = { _, _ -> },
     onOpenNotifications: () -> Unit = {},
     settings: Settings = Settings(),
@@ -128,7 +130,7 @@ fun HomeScreen(
     onResetAll: () -> Unit = {},
     requestAccess: ((HomeCard) -> Unit)? = null,
     nowProvider: () -> ZonedDateTime = { ZonedDateTime.now() },
-    onFyraftenZenRule: (Boolean) -> Unit = {},
+    onFyraftenZenRule: suspend (Boolean) -> Boolean = { true },
     calendarTestEvents: List<CalendarEvent>? = null,
     calendarsOverride: List<DeviceCalendar>? = null,
     interruptionFilterProvider: (() -> Int)? = null,
@@ -180,13 +182,30 @@ fun HomeScreen(
     var hiddenOpen by rememberSaveable { mutableStateOf(false) }
     var workoutOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    var scrollToWorkHours by rememberSaveable { mutableStateOf(false) }
+    var openWorkHoursHandled by rememberSaveable { mutableIntStateOf(0) }
     var workoutReloadCounter by remember { mutableIntStateOf(0) }
+    var fyraftenError by remember { mutableStateOf(false) }
+    LaunchedEffect(fyraftenError) { if (fyraftenError) { delay(5000); fyraftenError = false } }
     LaunchedEffect(homeSignal) {
         if (homeSignal > 0) {
             settingsOpen = false
+            scrollToWorkHours = false
             hiddenOpen = false
             workoutOpen = false
+            fyraftenError = false
             pager.scrollToPage(0)
+        }
+    }
+    LaunchedEffect(openWorkHoursSignal) {
+        if (openWorkHoursSignal > openWorkHoursHandled) {
+            openWorkHoursHandled = openWorkHoursSignal
+            drawerOpen = false
+            mediaPickerOpen = false
+            hiddenOpen = false
+            workoutOpen = false
+            scrollToWorkHours = true
+            settingsOpen = true
         }
     }
     var menuAppId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -206,7 +225,10 @@ fun HomeScreen(
     BackHandler(enabled = drawerOpen || query.isNotEmpty()) {
         if (drawerOpen) drawerOpen = false else query = ""
     }
-    BackHandler(enabled = settingsOpen) { settingsOpen = false }
+    BackHandler(enabled = settingsOpen) {
+        settingsOpen = false
+        scrollToWorkHours = false
+    }
     BackHandler(enabled = hiddenOpen) { hiddenOpen = false }
     BackHandler(enabled = workoutOpen) { workoutOpen = false }
     BackHandler(enabled = menuApp != null) { menuAppId = null }
@@ -228,11 +250,13 @@ fun HomeScreen(
             onOpenWorkout = { workoutOpen = true },
             onResetAll = {
                 settingsOpen = false
+                scrollToWorkHours = false
                 scope.launch { pager.scrollToPage(0) }
                 onResetAll()
             },
             requestAccess = requestAccess,
             calendarsOverride = calendarsOverride,
+            scrollToWorkHours = scrollToWorkHours,
         )
         return
     }
@@ -370,7 +394,10 @@ fun HomeScreen(
                                         .background(DarkIOColors.SurfaceGlass)
                                         .clickable(role = Role.Button) {
                                             onSettingsChange { it.copy(workEndOverrideDate = now.toLocalDate()) }
-                                            onFyraftenZenRule(true)
+                                            fyraftenError = false
+                                            scope.launch {
+                                                fyraftenError = !onFyraftenZenRule(true)
+                                            }
                                         }
                                         .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
                                     contentAlignment = Alignment.Center,
@@ -380,6 +407,18 @@ fun HomeScreen(
                                         style = DarkIOType.Button.copy(color = DarkIOColors.Ink),
                                     )
                                 }
+                            }
+                            if (p == 0 && fyraftenError) {
+                                BasicText(
+                                    stringResource(R.string.work_fyraften_error),
+                                    style = DarkIOType.Data.copy(color = DarkIOColors.Danger, textAlign = TextAlign.Center),
+                                    modifier = Modifier
+                                        .testTag("fyraftenError")
+                                        .padding(horizontal = DarkIOSpace.S4)
+                                        .clip(DarkIOShapes.Pill)
+                                        .background(DarkIOColors.SurfaceGlass)
+                                        .padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
+                                )
                             }
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
