@@ -4,14 +4,15 @@ import android.app.usage.UsageEvents
 import app.darkio.dashboard.CardState
 import app.darkio.dashboard.FocusData
 import app.darkio.dashboard.FocusUsageEvent
+import app.darkio.dashboard.FocusUsageMemoryCache
 import app.darkio.dashboard.calculateFocusData
 import app.darkio.dashboard.calculateHourlyBars
 import app.darkio.dashboard.calculateTopApps
 import app.darkio.dashboard.dayFocusTimeRange
 import app.darkio.dashboard.formatScreenTime
-import app.darkio.dashboard.formatUnlockCount
 import app.darkio.dashboard.formatYesterdayDifference
 import app.darkio.dashboard.loadFocusCardState
+import app.darkio.dashboard.queryFocusDataWithSource
 import app.darkio.dashboard.yesterdayFocusTimeRange
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -182,21 +183,15 @@ class FocusTest {
         assertEquals(15 * 60 * 1000L, result.screenTimeMillis)
     }
 
-    @Test
-    fun formatScreenTimeFormatsMinutesAndHours() {
-        assertEquals("0 m", formatScreenTime(0L))
-        assertEquals("45 m", formatScreenTime(45 * 60 * 1000L))
-        assertEquals("1 t", formatScreenTime(60 * 60 * 1000L))
-        assertEquals("1 t 24 m", formatScreenTime((84 * 60 * 1000L)))
-        assertEquals("2 t 15 m", formatScreenTime((135 * 60 * 1000L)))
-    }
+    private fun formatDuration(ms: Long) = formatScreenTime(ms, "%1\$d t %2\$d m", "%1\$d t", "%1\$d m")
 
     @Test
-    fun formatUnlockCountFormatsDanishSingularAndPlural() {
-        assertEquals("0 oplåsninger", formatUnlockCount(0))
-        assertEquals("1 oplåsning", formatUnlockCount(1))
-        assertEquals("2 oplåsninger", formatUnlockCount(2))
-        assertEquals("34 oplåsninger", formatUnlockCount(34))
+    fun formatScreenTimeFormatsMinutesAndHours() {
+        assertEquals("0 m", formatDuration(0L))
+        assertEquals("45 m", formatDuration(45 * 60 * 1000L))
+        assertEquals("1 t", formatDuration(60 * 60 * 1000L))
+        assertEquals("1 t 24 m", formatDuration(84 * 60 * 1000L))
+        assertEquals("2 t 15 m", formatDuration(135 * 60 * 1000L))
     }
 
     @Test
@@ -352,24 +347,163 @@ class FocusTest {
 
     @Test
     fun formatYesterdayDifferenceReturnsPositiveOnDecrease() {
+        val diffSame = "%1\$s mod i går"
+        val diffDecrease = "↓ %1\$s mod i går"
+        val diffIncrease = "↑ %1\$s mod i går"
+
         // Fald i skærmtid -> isDecrease = true (positive-farve)
-        val decrease = formatYesterdayDifference(todayMillis = 60 * 60 * 1000L, yesterdayMillis = 80 * 60 * 1000L)
+        val decrease = formatYesterdayDifference(60 * 60 * 1000L, 80 * 60 * 1000L, diffSame, diffDecrease, diffIncrease, ::formatDuration)
         assertEquals("↓ 20 m mod i går", decrease.text)
         assertTrue(decrease.isDecrease)
 
         // Stigning i skærmtid -> isDecrease = false (ikke positive)
-        val increase = formatYesterdayDifference(todayMillis = 90 * 60 * 1000L, yesterdayMillis = 60 * 60 * 1000L)
+        val increase = formatYesterdayDifference(90 * 60 * 1000L, 60 * 60 * 1000L, diffSame, diffDecrease, diffIncrease, ::formatDuration)
         assertEquals("↑ 30 m mod i går", increase.text)
         assertFalse(increase.isDecrease)
 
         // Samme skærmtid
-        val same = formatYesterdayDifference(todayMillis = 60 * 60 * 1000L, yesterdayMillis = 60 * 60 * 1000L)
+        val same = formatYesterdayDifference(60 * 60 * 1000L, 60 * 60 * 1000L, diffSame, diffDecrease, diffIncrease, ::formatDuration)
         assertEquals("0 m mod i går", same.text)
         assertFalse(same.isDecrease)
 
         // Ingen data i går
-        val noYesterday = formatYesterdayDifference(todayMillis = 45 * 60 * 1000L, yesterdayMillis = 0L)
+        val noYesterday = formatYesterdayDifference(45 * 60 * 1000L, 0L, diffSame, diffDecrease, diffIncrease, ::formatDuration)
         assertEquals("↑ 45 m mod i går", noYesterday.text)
         assertFalse(noYesterday.isDecrease)
+    }
+
+    @Test
+    fun yesterdayScreenTimeIsCachedInMemoryAndMinuteRefreshQueriesOnlyToday() = runTest {
+        val cache = FocusUsageMemoryCache()
+        val queriedRanges = mutableListOf<Pair<Long, Long>>()
+
+        val nov15Start = instant(15, 0).toEpochMilli()
+        val nov16Start = instant(16, 0).toEpochMilli()
+        val nov17Start = instant(17, 0).toEpochMilli()
+
+        val events = listOf(
+            // I går (15. nov): 20 min + 1 oplåsning
+            FocusUsageEvent(instant(15, 10, 0).toEpochMilli(), UsageEvents.Event.KEYGUARD_HIDDEN),
+            FocusUsageEvent(instant(15, 10, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.a"),
+            FocusUsageEvent(instant(15, 10, 20).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.a"),
+            // I dag (16. nov): 15 min kl. 09:00 + 10 min kl. 10:00:30
+            FocusUsageEvent(instant(16, 9, 0).toEpochMilli(), UsageEvents.Event.KEYGUARD_HIDDEN),
+            FocusUsageEvent(instant(16, 9, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.a"),
+            FocusUsageEvent(instant(16, 9, 15).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.a"),
+            FocusUsageEvent(instant(16, 10, 0, 30).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.b"),
+            FocusUsageEvent(instant(16, 10, 1, 30).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.b"),
+            // Efter midnat (17. nov): 5 min
+            FocusUsageEvent(instant(17, 0, 0, 30).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.c"),
+            FocusUsageEvent(instant(17, 0, 1, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.c"),
+        )
+
+        val source: suspend (Long, Long) -> List<FocusUsageEvent> = { startMs, endMs ->
+            queriedRanges.add(startMs to endMs)
+            events.filter { it.timestampMillis in startMs..endMs }
+        }
+
+        // 1. opslag kl. 10:00 (16. nov): henter gårsdagen én gang + i dag
+        val t1 = instant(16, 10, 0)
+        val d1 = queryFocusDataWithSource(t1, zone, "app.darkio", includeDetails = false, cache = cache, queryEvents = source)
+        assertEquals(20 * 60_000L, d1.yesterdayScreenTimeMillis)
+        assertEquals(15 * 60_000L, d1.screenTimeMillis)
+        assertEquals(1, d1.unlockCount)
+        assertEquals(listOf(nov15Start to nov16Start, nov16Start to t1.toEpochMilli()), queriedRanges)
+
+        // 2. opslag kl. 10:01 (minut-opdatering): henter KUN i dag (app.b åben i 30s indtil kl. 10:01)
+        val t2 = instant(16, 10, 1)
+        val d2 = queryFocusDataWithSource(t2, zone, "app.darkio", includeDetails = false, cache = cache, queryEvents = source)
+        assertEquals(20 * 60_000L, d2.yesterdayScreenTimeMillis)
+        assertEquals(15 * 60_000L + 30_000L, d2.screenTimeMillis)
+        assertEquals(3, queriedRanges.size)
+        assertEquals(nov16Start to t2.toEpochMilli(), queriedRanges[2])
+
+        // 3. opslag kl. 10:02 (minut-opdatering): henter KUN i dag
+        val t3 = instant(16, 10, 2)
+        val d3 = queryFocusDataWithSource(t3, zone, "app.darkio", includeDetails = false, cache = cache, queryEvents = source)
+        assertEquals(20 * 60_000L, d3.yesterdayScreenTimeMillis)
+        assertEquals(16 * 60_000L, d3.screenTimeMillis)
+        assertEquals(4, queriedRanges.size)
+        assertEquals(nov16Start to t3.toEpochMilli(), queriedRanges[3])
+
+        // 4. opslag efter midnat (17. nov kl. 00:01): ny dato -> gårsdagen (16. nov) hentes én gang
+        val t4 = instant(17, 0, 1)
+        val d4 = queryFocusDataWithSource(t4, zone, "app.darkio", includeDetails = false, cache = cache, queryEvents = source)
+        assertEquals(16 * 60_000L, d4.yesterdayScreenTimeMillis)
+        assertEquals(30_000L, d4.screenTimeMillis)
+        assertEquals(6, queriedRanges.size)
+        assertEquals(nov16Start to nov17Start, queriedRanges[4])
+        assertEquals(nov17Start to t4.toEpochMilli(), queriedRanges[5])
+
+        // 5. opslag kl. 00:02 (17. nov): gårsdagen er nu cachet for den nye dato
+        val t5 = instant(17, 0, 2)
+        queryFocusDataWithSource(t5, zone, "app.darkio", includeDetails = false, cache = cache, queryEvents = source)
+        assertEquals(7, queriedRanges.size)
+        assertEquals(nov17Start to t5.toEpochMilli(), queriedRanges[6])
+    }
+
+    @Test
+    fun compactFocusQuerySkipsHourlyBarsTopAppsAndLabelResolution() = runTest {
+        val cache = FocusUsageMemoryCache()
+        val queriedRanges = mutableListOf<Pair<Long, Long>>()
+        var labelLookups = 0
+
+        val events = listOf(
+            FocusUsageEvent(instant(16, 9, 0).toEpochMilli(), UsageEvents.Event.KEYGUARD_HIDDEN),
+            FocusUsageEvent(instant(16, 9, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.browser"),
+            FocusUsageEvent(instant(16, 9, 30).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.browser"),
+        )
+        val source: suspend (Long, Long) -> List<FocusUsageEvent> = { startMs, endMs ->
+            queriedRanges.add(startMs to endMs)
+            events.filter { it.timestampMillis in startMs..endMs }
+        }
+
+        // Kompakt visning (expanded = false): tomme detaljer og ingen label-opslag
+        val compact = queryFocusDataWithSource(
+            now = instant(16, 10, 0, 10),
+            zoneId = zone,
+            excludedPackage = "app.darkio",
+            includeDetails = false,
+            cache = cache,
+            queryEvents = source,
+            resolveLabel = { labelLookups++; "Browser" },
+        )
+        assertEquals(30 * 60_000L, compact.screenTimeMillis)
+        assertEquals(1, compact.unlockCount)
+        assertTrue(compact.hourlyBars.isEmpty())
+        assertTrue(compact.topApps.isEmpty())
+        assertEquals(0, labelLookups)
+
+        // Detaljevisning åbnes i samme minut: genbruger dagens hændelser og slår labels op
+        val expanded = queryFocusDataWithSource(
+            now = instant(16, 10, 0, 20),
+            zoneId = zone,
+            excludedPackage = "app.darkio",
+            includeDetails = true,
+            cache = cache,
+            queryEvents = source,
+            resolveLabel = { labelLookups++; "Browser" },
+        )
+        assertEquals(2, queriedRanges.size)
+        assertEquals(24, expanded.hourlyBars.size)
+        assertEquals(30 * 60_000L, expanded.hourlyBars[9].durationMillis)
+        assertEquals(1, expanded.topApps.size)
+        assertEquals("Browser", expanded.topApps[0].appLabel)
+        assertEquals(1, labelLookups)
+    }
+
+    @Test
+    fun focusFormattersAcceptResourceStrings() {
+        assertEquals("1 h 5 m", formatScreenTime(65 * 60_000L, "%1\$d h %2\$d m", "%1\$d h", "%1\$d m"))
+        val diff = formatYesterdayDifference(
+            todayMillis = 40 * 60_000L,
+            yesterdayMillis = 60 * 60_000L,
+            sameFormat = "%1\$s vs yesterday",
+            decreaseFormat = "↓ %1\$s vs yesterday",
+            increaseFormat = "↑ %1\$s vs yesterday",
+            formatDuration = { ms -> formatScreenTime(ms, "%1\$d h %2\$d m", "%1\$d h", "%1\$d m") },
+        )
+        assertEquals("↓ 20 m vs yesterday", diff.text)
+        assertTrue(diff.isDecrease)
     }
 }

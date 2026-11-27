@@ -147,7 +147,7 @@ class AppRepository(
         val info = app.info ?: return
         scope.launch(Dispatchers.IO) {
             val name = info.componentName
-            val serial = userManager.getSerialNumberForUser(info.user)
+            val serial = userManager?.getSerialNumberForUser(info.user) ?: 0L
             if (add) choices.addMediaApp(name.packageName, name.className, serial) else choices.removeMediaApp(name.packageName, name.className, serial)
         }
     }
