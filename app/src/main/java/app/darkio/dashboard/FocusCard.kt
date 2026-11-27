@@ -466,6 +466,8 @@ fun FocusCard(
             if (onClick != null) onClick() else expanded = !expanded
         },
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
+        cacheKey = "focus",
+        today = { now().atZone(zoneId).toLocalDate() },
         reloadTrigger = Triple(reloadTrigger, permissionAttempt, expanded),
         onGrantAccess = actualOnGrantAccess,
         needsAccessTitle = stringResource(R.string.focus_grant_access_title),

@@ -8,6 +8,11 @@ import android.net.Uri
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import app.darkio.ui.theme.DarkIOSize
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,9 +57,14 @@ fun buildAppLists(
     )
 }
 
-class AppRepository(private val context: Context, private val scope: CoroutineScope, private val choices: AppChoiceDao) {
-    private val launcherApps = context.getSystemService(LauncherApps::class.java)
-    private val userManager = context.getSystemService(UserManager::class.java)
+class AppRepository(
+    private val context: Context,
+    private val scope: CoroutineScope,
+    private val choices: AppChoiceDao,
+    val iconCache: AppIconCache = AppIconCache,
+) {
+    private val launcherApps = try { context.getSystemService(LauncherApps::class.java) } catch (_: Exception) { null }
+    private val userManager = try { context.getSystemService(UserManager::class.java) } catch (_: Exception) { null }
     private val installed = MutableStateFlow<List<AppEntry>>(emptyList())
     val lists: StateFlow<AppLists> = combine(installed, choices.all(), choices.shortcuts(), choices.mediaApps()) { apps, rows, shortcuts, media ->
         buildAppLists(apps, rows, shortcuts, media)
@@ -62,30 +72,47 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
         .stateIn(scope, SharingStarted.Eagerly, AppLists(emptyList(), emptyList()))
     private var job: Job? = null
 
-    private val callback = object : LauncherApps.Callback() {
-        override fun onPackageAdded(packageName: String, user: UserHandle) = refresh()
-        override fun onPackageRemoved(packageName: String, user: UserHandle) = refresh()
-        override fun onPackageChanged(packageName: String, user: UserHandle) = refresh()
-        override fun onPackagesAvailable(packageNames: Array<String>, user: UserHandle, replacing: Boolean) = refresh()
-        override fun onPackagesUnavailable(packageNames: Array<String>, user: UserHandle, replacing: Boolean) = refresh()
+    internal val callback = object : LauncherApps.Callback() {
+        override fun onPackageAdded(packageName: String, user: UserHandle) {
+            iconCache.removePackage(packageName)
+            refresh()
+        }
+        override fun onPackageRemoved(packageName: String, user: UserHandle) {
+            iconCache.removePackage(packageName)
+            refresh()
+        }
+        override fun onPackageChanged(packageName: String, user: UserHandle) {
+            iconCache.removePackage(packageName)
+            refresh()
+        }
+        override fun onPackagesAvailable(packageNames: Array<String>, user: UserHandle, replacing: Boolean) {
+            packageNames.forEach { iconCache.removePackage(it) }
+            refresh()
+        }
+        override fun onPackagesUnavailable(packageNames: Array<String>, user: UserHandle, replacing: Boolean) {
+            packageNames.forEach { iconCache.removePackage(it) }
+            refresh()
+        }
     }
 
     fun start() {
-        launcherApps.registerCallback(callback)
+        launcherApps?.registerCallback(callback)
         refresh()
     }
 
-    fun stop() = launcherApps.unregisterCallback(callback)
+    fun stop() {
+        launcherApps?.unregisterCallback(callback)
+    }
 
     fun launch(app: AppEntry) {
         val info = app.info ?: return
-        scope.launch(Dispatchers.IO) { launcherApps.startMainActivity(info.componentName, info.user, null, null) }
+        scope.launch(Dispatchers.IO) { launcherApps?.startMainActivity(info.componentName, info.user, null, null) }
     }
 
     fun setHidden(app: AppEntry, hidden: Boolean) {
         val info = app.info ?: return
         scope.launch(Dispatchers.IO) {
-            val serial = userManager.getSerialNumberForUser(info.user)
+            val serial = userManager?.getSerialNumberForUser(info.user) ?: 0L
             choices.setHidden(info.componentName.packageName, info.componentName.className, serial, hidden)
         }
     }
@@ -96,7 +123,8 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
             choices.setFavoriteSlots(changes.mapNotNull { (app, slot) ->
                 val info = app.info ?: return@mapNotNull null
                 val name = info.componentName
-                AppChoice(name.packageName, name.className, userManager.getSerialNumberForUser(info.user), favoriteSlot = slot)
+                val serial = userManager?.getSerialNumberForUser(info.user) ?: 0L
+                AppChoice(name.packageName, name.className, serial, favoriteSlot = slot)
             })
         }
     }
@@ -107,7 +135,8 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
             val rows = changes.mapNotNull { (app, slot) ->
                 val info = app.info ?: return@mapNotNull null
                 val name = info.componentName
-                PageShortcut(page, name.packageName, name.className, userManager.getSerialNumberForUser(info.user), slot ?: -1)
+                val serial = userManager?.getSerialNumberForUser(info.user) ?: 0L
+                PageShortcut(page, name.packageName, name.className, serial, slot ?: -1)
             }
             choices.setShortcuts(rows.filter { it.slot >= 0 }, rows.filter { it.slot < 0 })
         }
@@ -126,14 +155,14 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
     fun setCategory(app: AppEntry, category: AppCategory) {
         val info = app.info ?: return
         scope.launch(Dispatchers.IO) {
-            val serial = userManager.getSerialNumberForUser(info.user)
+            val serial = userManager?.getSerialNumberForUser(info.user) ?: 0L
             choices.setCategory(info.componentName.packageName, info.componentName.className, serial, category.slug)
         }
     }
 
     fun openAppInfo(app: AppEntry) {
         val info = app.info ?: return
-        scope.launch(Dispatchers.IO) { launcherApps.startAppDetailsActivity(info.componentName, info.user, null, null) }
+        scope.launch(Dispatchers.IO) { launcherApps?.startAppDetailsActivity(info.componentName, info.user, null, null) }
     }
 
     fun uninstall(app: AppEntry) {
@@ -144,17 +173,48 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
         context.startActivity(intent)
     }
 
-    private fun refresh() {
+    internal fun refresh() {
         job?.cancel()
         job = scope.launch {
             val list = withContext(Dispatchers.IO) {
                 val user = Process.myUserHandle()
-                val serial = userManager.getSerialNumberForUser(user)
-                launcherApps.getActivityList(null, user)
-                    .map { AppEntry(appId(it.applicationInfo.packageName, it.componentName.className, serial), it.label.toString(), it) }
-                    .sortedWith(appOrder)
+                val serial = userManager?.getSerialNumberForUser(user) ?: 0L
+                val apps = launcherApps?.getActivityList(null, user)
+                    ?.map { AppEntry(appId(it.applicationInfo.packageName, it.componentName.className, serial), it.label.toString(), it) }
+                    ?.sortedWith(appOrder)
+                    ?: emptyList()
+                preloadIcons(apps)
+                apps
             }
             installed.value = list
+        }
+    }
+
+    internal fun preloadIcons(
+        apps: List<AppEntry>,
+        loader: ((AppEntry, Int, Int) -> ImageBitmap?)? = null,
+    ) {
+        val px = try {
+            (DarkIOSize.IconTile.value * context.resources.displayMetrics.density).roundToInt().coerceAtLeast(1)
+        } catch (_: Exception) {
+            1
+        }
+        val dpi = try {
+            context.resources.configuration.densityDpi
+        } catch (_: Exception) {
+            0
+        }
+        for (app in apps) {
+            if (iconCache.get(app.id, px) == null) {
+                val bitmap = if (loader != null) {
+                    loader(app, px, dpi)
+                } else {
+                    app.info?.getIcon(dpi)?.toBitmap(px, px)?.asImageBitmap()
+                }
+                if (bitmap != null) {
+                    iconCache.put(app.id, px, bitmap)
+                }
+            }
         }
     }
 }
