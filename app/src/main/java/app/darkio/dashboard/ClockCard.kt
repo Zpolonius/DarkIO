@@ -31,6 +31,7 @@ fun ClockCard(modifier: Modifier = Modifier, now: () -> LocalDateTime = LocalDat
         load = { CardState.Content(now()) },
         modifier = modifier,
         refreshAfterMs = { millisToNextMinute(now()) },
+        initial = { CardState.Content(now()) },
     ) { t ->
         BasicText(
             buildAnnotatedString {

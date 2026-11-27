@@ -282,6 +282,8 @@ fun ActivityGridCard(
         },
         modifier = modifier,
         verticalPadding = verticalPadding,
+        cacheKey = "activityGrid",
+        today = { now() },
         reloadTrigger = permissionAttempt to (reloadTrigger to stepGoal),
     ) { data ->
         val goalDaysText = pluralStringResource(

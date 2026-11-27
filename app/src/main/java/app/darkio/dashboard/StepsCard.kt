@@ -225,6 +225,8 @@ fun StepsCard(
         modifier = modifier,
         verticalPadding = verticalPadding,
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
+        cacheKey = "steps",
+        today = { now().atZone(zoneId).toLocalDate() },
         reloadTrigger = permissionAttempt to goal,
         onGrantAccess = actualOnGrantAccess,
         needsAccessTitle = stringResource(R.string.steps_grant_access_title),

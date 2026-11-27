@@ -72,6 +72,8 @@ fun WorkoutCard(
         },
         modifier = modifier,
         verticalPadding = verticalPadding,
+        cacheKey = "workout",
+        today = { now() },
         reloadTrigger = reloadTrigger,
     ) { data ->
         Column(Modifier.fillMaxWidth()) {

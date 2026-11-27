@@ -177,6 +177,8 @@ fun CaloriesCard(
         modifier = modifier,
         verticalPadding = verticalPadding,
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
+        cacheKey = "calories",
+        today = { now().atZone(zoneId).toLocalDate() },
         reloadTrigger = permissionAttempt,
         onGrantAccess = onGrantAccess ?: {
             try { launcher.launch(CALORIES_PERMISSIONS) } catch (_: Throwable) { permissionAttempt++ }
