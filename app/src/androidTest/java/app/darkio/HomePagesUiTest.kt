@@ -3,9 +3,11 @@ package app.darkio
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -13,12 +15,13 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
-import androidx.compose.ui.unit.width
 import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.width
 import androidx.test.platform.app.InstrumentationRegistry
 import app.darkio.data.AppEntry
 import app.darkio.data.splitApps
 import app.darkio.home.HomeScreen
+import app.darkio.ui.theme.DarkIOSize
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -79,9 +82,14 @@ class HomePagesUiTest {
     @Test
     fun dotSizesMatchSpec() {
         show()
-        val active = rule.onNodeWithTag("pageDot0").getUnclippedBoundsInRoot()
-        assertEquals(44f, active.width.value, 0.5f)
-        assertEquals(24f, active.height.value, 0.5f)
+        (0..3).forEach { i ->
+            rule.onNodeWithTag("pageDot$i")
+                .assertWidthIsAtLeast(DarkIOSize.TouchMin)
+                .assertHeightIsAtLeast(DarkIOSize.PageDotHitHeight)
+            val visual = rule.onNodeWithTag("pageDotVisual$i", useUnmergedTree = true).getUnclippedBoundsInRoot()
+            assertEquals(if (i == 0) DarkIOSize.PageDotActiveWidth.value else DarkIOSize.PageDot.value, visual.width.value, 0.5f)
+            assertEquals(DarkIOSize.PageDot.value, visual.height.value, 0.5f)
+        }
     }
 
     @Test

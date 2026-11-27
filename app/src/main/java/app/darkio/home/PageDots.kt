@@ -20,7 +20,7 @@ import app.darkio.ui.theme.DarkIOColors
 import app.darkio.ui.theme.DarkIOShapes
 import app.darkio.ui.theme.DarkIOSize
 
-/** Sideprikker: aktiv side er en 20 × 6 pille i accent, de andre 6 × 6 i line-strong; hver har en 44 × 24 trykflade. */
+/** Sideprikker: aktiv side er en 20 × 6 pille i accent, de andre 6 × 6 i line-strong; hver har en 44 × 44 trykflade. */
 @Composable
 fun PageDots(labels: List<String>, current: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -36,6 +36,7 @@ fun PageDots(labels: List<String>, current: Int, onSelect: (Int) -> Unit, modifi
             ) {
                 Box(
                     Modifier
+                        .testTag("pageDotVisual$i")
                         .width(if (active) DarkIOSize.PageDotActiveWidth else DarkIOSize.PageDot)
                         .height(DarkIOSize.PageDot)
                         .clip(DarkIOShapes.Pill)
