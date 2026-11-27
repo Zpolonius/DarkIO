@@ -59,6 +59,12 @@ class AppIconCacheTest {
         override suspend fun deleteShortcut(page: Int, packageName: String, activity: String, userSerial: Long) {}
         override suspend fun clearAllChoices() {}
         override suspend fun clearAllShortcuts() {}
+        override fun mediaApps(): kotlinx.coroutines.flow.Flow<List<app.darkio.data.MediaApp>> =
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        override suspend fun nextMediaPosition(): Int = 0
+        override suspend fun insertMediaApp(app: app.darkio.data.MediaApp) {}
+        override suspend fun removeMediaApp(packageName: String, activity: String, userSerial: Long) {}
+        override suspend fun clearAllMediaApps() {}
     }
 
     private fun dummyDao(): AppChoiceDao = FakeAppChoiceDao()
