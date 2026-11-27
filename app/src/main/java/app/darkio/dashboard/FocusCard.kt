@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -44,8 +45,12 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 data class HourlyBar(val hour: Int, val durationMillis: Long, val isCurrentHour: Boolean = false)
@@ -74,33 +79,45 @@ fun yesterdayFocusTimeRange(now: Instant = Instant.now(), zoneId: ZoneId = ZoneI
     return yesterday.atStartOfDay(zoneId).toInstant() to today.atStartOfDay(zoneId).toInstant()
 }
 
-/** Formaterer skærmtid i timer og minutter, fx '1 t 24 m', '45 m' eller '0 m'. */
-fun formatScreenTime(totalMillis: Long): String {
+/** Formaterer skærmtid med formater fra ressourcer (fx '1 t 24 m', '45 m' eller '0 m'). */
+fun formatScreenTime(
+    totalMillis: Long,
+    hoursMinutesFormat: String,
+    hoursFormat: String,
+    minutesFormat: String,
+): String {
     val totalMinutes = (totalMillis / 1000 / 60).coerceAtLeast(0)
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
+    val locale = Locale("da")
     return when {
-        hours > 0 && minutes > 0 -> "${hours} t ${minutes} m"
-        hours > 0 -> "${hours} t"
-        else -> "${minutes} m"
+        hours > 0 && minutes > 0 -> String.format(locale, hoursMinutesFormat, hours, minutes)
+        hours > 0 -> String.format(locale, hoursFormat, hours)
+        else -> String.format(locale, minutesFormat, minutes)
     }
 }
 
-/** Formaterer antal oplåsninger på dansk, fx '1 oplåsning', '34 oplåsninger'. */
-fun formatUnlockCount(count: Int): String {
-    val safeCount = count.coerceAtLeast(0)
-    return if (safeCount == 1) "1 oplåsning" else "$safeCount oplåsninger"
-}
-
-/** Formaterer forskellen mod i går. Ved fald er [YesterdayDifference.isDecrease] sand (positive farve). */
-fun formatYesterdayDifference(todayMillis: Long, yesterdayMillis: Long): YesterdayDifference {
-    if (yesterdayMillis <= 0L && todayMillis == 0L) return YesterdayDifference("0 m mod i går", false)
-    if (yesterdayMillis <= 0L) return YesterdayDifference("↑ ${formatScreenTime(todayMillis)} mod i går", false)
+/** Formaterer forskellen mod i går ud fra ressource-formater. Ved fald er [YesterdayDifference.isDecrease] sand (positive farve). */
+fun formatYesterdayDifference(
+    todayMillis: Long,
+    yesterdayMillis: Long,
+    sameFormat: String,
+    decreaseFormat: String,
+    increaseFormat: String,
+    formatDuration: (Long) -> String,
+): YesterdayDifference {
+    val locale = Locale("da")
+    if (yesterdayMillis <= 0L && todayMillis == 0L) {
+        return YesterdayDifference(String.format(locale, sameFormat, formatDuration(0L)), false)
+    }
+    if (yesterdayMillis <= 0L) {
+        return YesterdayDifference(String.format(locale, increaseFormat, formatDuration(todayMillis)), false)
+    }
     val diff = todayMillis - yesterdayMillis
     return when {
-        diff < 0L -> YesterdayDifference("↓ ${formatScreenTime(-diff)} mod i går", true)
-        diff > 0L -> YesterdayDifference("↑ ${formatScreenTime(diff)} mod i går", false)
-        else -> YesterdayDifference("0 m mod i går", false)
+        diff < 0L -> YesterdayDifference(String.format(locale, decreaseFormat, formatDuration(-diff)), true)
+        diff > 0L -> YesterdayDifference(String.format(locale, increaseFormat, formatDuration(diff)), false)
+        else -> YesterdayDifference(String.format(locale, sameFormat, formatDuration(0L)), false)
     }
 }
 
@@ -179,11 +196,20 @@ fun calculateHourlyBars(events: List<FocusUsageEvent>, date: LocalDate, now: Ins
     }
 }
 
-/** Beregner top-apps for perioden sorteret efter skærmtid faldende (højst [limit] stk). */
-fun calculateTopApps(events: List<FocusUsageEvent>, startTimeMillis: Long, endTimeMillis: Long, excludedPackage: String? = null, resolveLabel: (String) -> String = { it }, limit: Int = 3): List<TopAppUsage> =
+/** Beregner skærmtid pr. pakkenavn i intervallet [startTimeMillis, endTimeMillis]. */
+fun calculateUsageMillisByPackage(
+    events: List<FocusUsageEvent>,
+    startTimeMillis: Long,
+    endTimeMillis: Long,
+    excludedPackage: String? = null,
+): Map<String, Long> =
     extractUsageSessions(events, startTimeMillis, endTimeMillis, excludedPackage)
         .groupBy { it.packageName }
         .mapValues { (_, s) -> s.sumOf { it.endMillis - it.startMillis } }
+
+/** Beregner top-apps for perioden sorteret efter skærmtid faldende (højst [limit] stk). */
+fun calculateTopApps(events: List<FocusUsageEvent>, startTimeMillis: Long, endTimeMillis: Long, excludedPackage: String? = null, resolveLabel: (String) -> String = { it }, limit: Int = 3): List<TopAppUsage> =
+    calculateUsageMillisByPackage(events, startTimeMillis, endTimeMillis, excludedPackage)
         .filter { it.value > 0L }
         .toList()
         .sortedByDescending { it.second }
@@ -249,36 +275,154 @@ fun openDigitalWellbeing(context: Context) {
     }
 }
 
-/** Henter dagens og gårsdagens fokusdata fra UsageStatsManager på Dispatchers.IO (N5, N10: gemmes ikke). */
-suspend fun queryUsageStatsFocusData(context: Context, now: Instant = Instant.now(), zoneId: ZoneId = ZoneId.systemDefault()): FocusData = withContext(Dispatchers.IO) {
-    val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return@withContext FocusData(0L, 0)
-    val (startYesterday, endYesterday) = yesterdayFocusTimeRange(now, zoneId)
-    val (startToday, endToday) = dayFocusTimeRange(now, zoneId)
+/**
+ * Ren in-memory cache for brugsdata (N5: gemmes aldrig på disk).
+ * Husker gårsdagens skærmtid pr. (dato, zoneId, excludedPackage) og deler dagens hændelser
+ * inden for samme minut mellem fokus-kortet og byg-siden.
+ */
+class FocusUsageMemoryCache {
+    private data class YesterdayKey(val date: LocalDate, val zoneId: String, val excludedPackage: String?)
+    private data class TodayKey(val date: LocalDate, val zoneId: String, val excludedPackage: String?, val epochMinute: Long, val version: Int)
 
-    val events = usageStatsManager.queryEvents(startYesterday.toEpochMilli(), endToday.toEpochMilli())
+    private val yesterdayMutex = Mutex()
+    private val yesterdayCache = LinkedHashMap<YesterdayKey, Long>(4, 0.75f, true)
+
+    private val todayMutex = Mutex()
+    private val todayVersion = AtomicInteger(0)
+    private var cachedTodayKey: TodayKey? = null
+    private var cachedTodayEvents: List<FocusUsageEvent> = emptyList()
+
+    /** Rydder dagens hændelser i hukommelsen (fx ved ON_STOP), mens gårsdagens skærmtid bevares. */
+    fun invalidateToday() {
+        todayVersion.incrementAndGet()
+    }
+
+    suspend fun getOrQueryYesterdayScreenTime(
+        now: Instant,
+        zoneId: ZoneId,
+        excludedPackage: String?,
+        startYesterdayMs: Long,
+        endYesterdayMs: Long,
+        queryEvents: suspend (startMs: Long, endMs: Long) -> List<FocusUsageEvent>,
+    ): Long = yesterdayMutex.withLock {
+        val key = YesterdayKey(now.atZone(zoneId).toLocalDate(), zoneId.id, excludedPackage)
+        yesterdayCache[key]?.let { return@withLock it }
+        val events = queryEvents(startYesterdayMs, endYesterdayMs)
+        val screenTime = calculateFocusData(events, startYesterdayMs, endYesterdayMs, excludedPackage).screenTimeMillis
+        if (yesterdayCache.size >= 4) {
+            yesterdayCache.keys.firstOrNull()?.let { yesterdayCache.remove(it) }
+        }
+        yesterdayCache[key] = screenTime
+        screenTime
+    }
+
+    suspend fun getOrQueryTodayEvents(
+        now: Instant,
+        zoneId: ZoneId,
+        excludedPackage: String?,
+        startTodayMs: Long,
+        endTodayMs: Long,
+        queryEvents: suspend (startMs: Long, endMs: Long) -> List<FocusUsageEvent>,
+    ): List<FocusUsageEvent> = todayMutex.withLock {
+        val key = TodayKey(
+            date = now.atZone(zoneId).toLocalDate(),
+            zoneId = zoneId.id,
+            excludedPackage = excludedPackage,
+            epochMinute = now.epochSecond / 60L,
+            version = todayVersion.get(),
+        )
+        if (cachedTodayKey == key) return@withLock cachedTodayEvents
+        val events = queryEvents(startTodayMs, endTodayMs)
+        cachedTodayKey = key
+        cachedTodayEvents = events
+        events
+    }
+}
+
+val sharedFocusUsageCache = FocusUsageMemoryCache()
+
+internal fun queryUsageEventsList(
+    usageStatsManager: UsageStatsManager,
+    startMs: Long,
+    endMs: Long,
+): List<FocusUsageEvent> {
+    val events = usageStatsManager.queryEvents(startMs, endMs)
     val eventList = mutableListOf<FocusUsageEvent>()
     val event = UsageEvents.Event()
     while (events.hasNextEvent()) {
         events.getNextEvent(event)
         eventList.add(FocusUsageEvent(timestampMillis = event.timeStamp, eventType = event.eventType, packageName = event.packageName.orEmpty()))
     }
+    return eventList
+}
 
-    val yesterdayData = calculateFocusData(eventList, startYesterday.toEpochMilli(), endYesterday.toEpochMilli(), context.packageName)
-    val todayData = calculateFocusData(eventList, startToday.toEpochMilli(), endToday.toEpochMilli(), context.packageName)
+/** Henter fokusdata fra en abstrakt hændelseskilde med in-memory cache og valgfri detaljeberegning. */
+suspend fun queryFocusDataWithSource(
+    now: Instant,
+    zoneId: ZoneId,
+    excludedPackage: String?,
+    includeDetails: Boolean,
+    cache: FocusUsageMemoryCache = sharedFocusUsageCache,
+    queryEvents: suspend (startMs: Long, endMs: Long) -> List<FocusUsageEvent>,
+    resolveLabel: (String) -> String = { it },
+): FocusData {
+    val (startYesterday, endYesterday) = yesterdayFocusTimeRange(now, zoneId)
+    val (startToday, endToday) = dayFocusTimeRange(now, zoneId)
+    val startTodayMs = startToday.toEpochMilli()
+    val endTodayMs = endToday.toEpochMilli()
+
+    val yesterdayScreenTime = cache.getOrQueryYesterdayScreenTime(
+        now = now,
+        zoneId = zoneId,
+        excludedPackage = excludedPackage,
+        startYesterdayMs = startYesterday.toEpochMilli(),
+        endYesterdayMs = endYesterday.toEpochMilli(),
+        queryEvents = queryEvents,
+    )
+    val todayEvents = cache.getOrQueryTodayEvents(
+        now = now,
+        zoneId = zoneId,
+        excludedPackage = excludedPackage,
+        startTodayMs = startTodayMs,
+        endTodayMs = endTodayMs,
+        queryEvents = queryEvents,
+    )
+    val todayData = calculateFocusData(todayEvents, startTodayMs, endTodayMs, excludedPackage)
+    if (!includeDetails) {
+        return FocusData(todayData.screenTimeMillis, todayData.unlockCount, yesterdayScreenTime)
+    }
+
     val todayDate = now.atZone(zoneId).toLocalDate()
-    val hourlyBars = calculateHourlyBars(eventList, todayDate, now, zoneId, context.packageName)
+    val hourlyBars = calculateHourlyBars(todayEvents, todayDate, now, zoneId, excludedPackage)
+    val topApps = calculateTopApps(todayEvents, startTodayMs, endTodayMs, excludedPackage, resolveLabel = resolveLabel)
+    return FocusData(todayData.screenTimeMillis, todayData.unlockCount, yesterdayScreenTime, hourlyBars, topApps)
+}
 
+/** Henter dagens og gårsdagens fokusdata fra UsageStatsManager på Dispatchers.IO (N5, N10: gemmes ikke). */
+suspend fun queryUsageStatsFocusData(
+    context: Context,
+    now: Instant = Instant.now(),
+    zoneId: ZoneId = ZoneId.systemDefault(),
+    includeDetails: Boolean = false,
+): FocusData = withContext(Dispatchers.IO) {
+    val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return@withContext FocusData(0L, 0)
     val pm = context.packageManager
-    val topApps = calculateTopApps(eventList, startToday.toEpochMilli(), endToday.toEpochMilli(), context.packageName, resolveLabel = { pkg ->
-        try {
-            val appInfo = pm.getApplicationInfo(pkg, 0)
-            pm.getApplicationLabel(appInfo).toString()
-        } catch (_: Throwable) {
-            pkg.substringAfterLast('.')
-        }
-    })
-
-    FocusData(todayData.screenTimeMillis, todayData.unlockCount, yesterdayData.screenTimeMillis, hourlyBars, topApps)
+    queryFocusDataWithSource(
+        now = now,
+        zoneId = zoneId,
+        excludedPackage = context.packageName,
+        includeDetails = includeDetails,
+        cache = sharedFocusUsageCache,
+        queryEvents = { startMs, endMs -> queryUsageEventsList(usageStatsManager, startMs, endMs) },
+        resolveLabel = { pkg ->
+            try {
+                val appInfo = pm.getApplicationInfo(pkg, 0)
+                pm.getApplicationLabel(appInfo).toString()
+            } catch (_: Throwable) {
+                pkg.substringAfterLast('.')
+            }
+        },
+    )
 }
 
 /**
@@ -304,9 +448,17 @@ fun FocusCard(
     var expanded by rememberSaveable { mutableStateOf(initialExpanded) }
 
     val actualHasPermission = hasPermission ?: { hasUsageStatsPermission(context) }
-    val actualLoadFocus = loadFocus ?: { queryUsageStatsFocusData(context, now(), zoneId) }
+    val actualLoadFocus = loadFocus ?: { queryUsageStatsFocusData(context, now(), zoneId, includeDetails = expanded) }
     val actualOnGrantAccess = onGrantAccess ?: { openUsageAccessSettings(context); permissionAttempt++; Unit }
     val actualOnOpenWellbeing = onOpenWellbeing ?: { openDigitalWellbeing(context) }
+
+    val hoursMinutesFmt = stringResource(R.string.duration_hours_minutes)
+    val hoursFmt = stringResource(R.string.duration_hours)
+    val minutesFmt = stringResource(R.string.duration_minutes)
+    val formatDuration: (Long) -> String = { ms -> formatScreenTime(ms, hoursMinutesFmt, hoursFmt, minutesFmt) }
+    val diffSameFmt = stringResource(R.string.focus_diff_same)
+    val diffDecreaseFmt = stringResource(R.string.focus_diff_decrease)
+    val diffIncreaseFmt = stringResource(R.string.focus_diff_increase)
 
     LoadedCard(
         load = { loadFocusCardState(actualHasPermission, actualLoadFocus) },
@@ -314,23 +466,32 @@ fun FocusCard(
             if (onClick != null) onClick() else expanded = !expanded
         },
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
-        reloadTrigger = if (reloadTrigger != null) (reloadTrigger to permissionAttempt) else permissionAttempt,
+        reloadTrigger = Triple(reloadTrigger, permissionAttempt, expanded),
         onGrantAccess = actualOnGrantAccess,
         needsAccessTitle = stringResource(R.string.focus_grant_access_title),
         needsAccessExplanation = stringResource(R.string.focus_grant_access_explanation),
     ) { data ->
+        val safeUnlocks = data.unlockCount.coerceAtLeast(0)
+        val unlockText = pluralStringResource(R.plurals.focus_unlocks, safeUnlocks, safeUnlocks)
         Column(Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 BasicText(stringResource(R.string.focus_title), style = DarkIOType.Item.copy(color = DarkIOColors.Ink))
-                BasicText(formatScreenTime(data.screenTimeMillis), style = DarkIOType.Data.copy(color = DarkIOColors.Ink), modifier = Modifier.testTag("focusScreenTime"))
+                BasicText(formatDuration(data.screenTimeMillis), style = DarkIOType.Data.copy(color = DarkIOColors.Ink), modifier = Modifier.testTag("focusScreenTime"))
             }
             Spacer(Modifier.height(DarkIOSpace.S1))
             if (!expanded) {
-                BasicText(formatUnlockCount(data.unlockCount), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("focusUnlockCount"))
+                BasicText(unlockText, style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("focusUnlockCount"))
             } else {
-                val diff = formatYesterdayDifference(data.screenTimeMillis, data.yesterdayScreenTimeMillis)
+                val diff = formatYesterdayDifference(
+                    todayMillis = data.screenTimeMillis,
+                    yesterdayMillis = data.yesterdayScreenTimeMillis,
+                    sameFormat = diffSameFmt,
+                    decreaseFormat = diffDecreaseFmt,
+                    increaseFormat = diffIncreaseFmt,
+                    formatDuration = formatDuration,
+                )
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                    BasicText(formatUnlockCount(data.unlockCount), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("focusUnlockCount"))
+                    BasicText(unlockText, style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft), modifier = Modifier.testTag("focusUnlockCount"))
                     BasicText(diff.text, style = DarkIOType.Data.copy(color = if (diff.isDecrease) DarkIOColors.Positive else DarkIOColors.InkSoft), modifier = Modifier.testTag("focusDifference"))
                 }
                 if (data.hourlyBars.isNotEmpty()) {
@@ -349,7 +510,7 @@ fun FocusCard(
                         for ((i, app) in data.topApps.withIndex()) {
                             Row(Modifier.fillMaxWidth().testTag("focusTopApp_$i"), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                                 BasicText(app.appLabel, style = DarkIOType.Body.copy(color = DarkIOColors.Ink), modifier = Modifier.weight(1f, fill = false))
-                                BasicText(formatScreenTime(app.durationMillis), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft))
+                                BasicText(formatDuration(app.durationMillis), style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft))
                             }
                         }
                     }

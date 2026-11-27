@@ -121,6 +121,10 @@ fun BuildPage(
     val cards = pageData?.cards ?: installedAiApps.map {
         AiAppCardData(it, null, emptyList(), 0L, 0L)
     }
+    val hoursMinutesFmt = stringResource(R.string.duration_hours_minutes)
+    val hoursFmt = stringResource(R.string.duration_hours)
+    val minutesFmt = stringResource(R.string.duration_minutes)
+    val formatDuration: (Long) -> String = { ms -> formatScreenTime(ms, hoursMinutesFmt, hoursFmt, minutesFmt) }
 
     Box(modifier.fillMaxSize()) {
         // Øverste zone (læsezonen): "ai i dag" + dagens tip
@@ -151,6 +155,7 @@ fun BuildPage(
                     totalTodayMillis = totalAiToday,
                     hasAccess = hasAccess,
                     noAccessText = stringResource(R.string.ai_grant_access),
+                    formatDuration = formatDuration,
                 )
                 BasicText(
                     todayText,
@@ -240,6 +245,7 @@ fun BuildPage(
                         onGrantAccess = actualGrantAccess,
                         nowInstant = nowInstant,
                         zoneId = zoneId,
+                        formatDuration = formatDuration,
                     )
                 }
             }
@@ -256,6 +262,7 @@ private fun AiAppCard(
     onGrantAccess: () -> Unit,
     nowInstant: () -> Instant,
     zoneId: ZoneId,
+    formatDuration: (Long) -> String,
 ) {
     val app = card.app
     Column(
@@ -301,6 +308,7 @@ private fun AiAppCard(
                     neverUsedText = stringResource(R.string.ai_last_used_never),
                     yesterdayText = stringResource(R.string.ai_last_used_yesterday),
                     todayFormat = stringResource(R.string.ai_last_used_today),
+                    formatDuration = formatDuration,
                 )
                 BasicText(
                     usageText,

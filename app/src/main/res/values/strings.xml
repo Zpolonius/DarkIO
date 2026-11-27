@@ -120,6 +120,16 @@
     <string name="focus_grant_access_title">Giv adgang til brugsdata</string>
     <string name="focus_grant_access_explanation">Viser skærmtid og antal oplåsninger. Brugsdata bliver på telefonen.</string>
     <string name="focus_digital_wellbeing">Digital Wellbeing ↗</string>
+    <string name="duration_hours_minutes">%1$d t %2$d m</string>
+    <string name="duration_hours">%1$d t</string>
+    <string name="duration_minutes">%1$d m</string>
+    <plurals name="focus_unlocks">
+        <item quantity="one">%1$d oplåsning</item>
+        <item quantity="other">%1$d oplåsninger</item>
+    </plurals>
+    <string name="focus_diff_same">%1$s mod i går</string>
+    <string name="focus_diff_decrease">↓ %1$s mod i går</string>
+    <string name="focus_diff_increase">↑ %1$s mod i går</string>
     <string name="steps_title">skridt</string>
     <string name="steps_grant_access_title">Giv adgang til skridt</string>
     <string name="steps_grant_access_explanation">Viser dagens skridt fra Health Connect. Sundhedsdata bliver på telefonen.</string>

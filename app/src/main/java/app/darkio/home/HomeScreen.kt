@@ -67,6 +67,7 @@ import app.darkio.dashboard.StepsCard
 import app.darkio.dashboard.TipCard
 import app.darkio.dashboard.WorkoutCard
 import app.darkio.dashboard.BuildPage
+import app.darkio.dashboard.sharedFocusUsageCache
 import app.darkio.data.AppCategory
 import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
@@ -142,6 +143,9 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME, lifecycleOwner) {
         resumeTick++
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP, lifecycleOwner) {
+        sharedFocusUsageCache.invalidateToday()
     }
     val now = remember(nowProvider, resumeTick) { nowProvider() }
     val isWorkHours = remember(settings, now) { isWorkHours(settings, now) }
@@ -350,26 +354,51 @@ fun HomeScreen(
                         }
                         // Fast plads over sideprikkerne; på glas, så den kan læses på lyse billeder (N8).
                         // Medier-siden har brug for pladsen nederst (F15) og viser sit eget navn øverst.
-                        if (p != MEDIA_PAGE) Row(
+                        if (p != MEDIA_PAGE) Column(
                             modifier = Modifier.align(Alignment.BottomCenter),
-                            horizontalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
-                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
                         ) {
-                            BasicText(
-                                pageLabels[p],
-                                style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft),
-                                modifier = Modifier.testTag("page$p").clip(DarkIOShapes.Pill).background(DarkIOColors.SurfaceGlass).padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
-                            )
                             if (p == 0 && isWorkHours && !isBedtime) {
-                                BasicText(
-                                    stringResource(R.string.work_hours_badge),
-                                    style = DarkIOType.Data.copy(color = DarkIOColors.Accent),
+                                Box(
                                     modifier = Modifier
-                                        .testTag("workHoursBadge")
+                                        .testTag("fyraftenButton")
+                                        .heightIn(min = DarkIOSize.TouchMin)
                                         .clip(DarkIOShapes.Pill)
                                         .background(DarkIOColors.SurfaceGlass)
-                                        .padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
+                                        .clickable(role = Role.Button) {
+                                            onSettingsChange { it.copy(workEndOverrideDate = now.toLocalDate()) }
+                                            onFyraftenZenRule(true)
+                                        }
+                                        .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    BasicText(
+                                        stringResource(R.string.work_fyraften_button),
+                                        style = DarkIOType.Button.copy(color = DarkIOColors.Ink),
+                                    )
+                                }
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                BasicText(
+                                    pageLabels[p],
+                                    style = DarkIOType.Data.copy(color = DarkIOColors.InkSoft),
+                                    modifier = Modifier.testTag("page$p").clip(DarkIOShapes.Pill).background(DarkIOColors.SurfaceGlass).padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
                                 )
+                                if (p == 0 && isWorkHours && !isBedtime) {
+                                    BasicText(
+                                        stringResource(R.string.work_hours_badge),
+                                        style = DarkIOType.Data.copy(color = DarkIOColors.Accent),
+                                        modifier = Modifier
+                                            .testTag("workHoursBadge")
+                                            .clip(DarkIOShapes.Pill)
+                                            .background(DarkIOColors.SurfaceGlass)
+                                            .padding(horizontal = DarkIOSpace.S3, vertical = DarkIOSpace.S1),
+                                    )
+                                }
                             }
                         }
                     }
@@ -406,26 +435,6 @@ fun HomeScreen(
                                     )
                                 }
                             } else {
-                                if (p == 0 && isWorkHours) {
-                                    Box(
-                                        modifier = Modifier
-                                            .testTag("fyraftenButton")
-                                            .heightIn(min = DarkIOSize.TouchMin)
-                                            .clip(DarkIOShapes.Pill)
-                                            .background(DarkIOColors.SurfaceGlass)
-                                            .clickable(role = Role.Button) {
-                                                onSettingsChange { it.copy(workEndOverrideDate = now.toLocalDate()) }
-                                                onFyraftenZenRule(true)
-                                            }
-                                            .padding(horizontal = DarkIOSpace.S4, vertical = DarkIOSpace.S2),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        BasicText(
-                                            stringResource(R.string.work_fyraften_button),
-                                            style = DarkIOType.Button.copy(color = DarkIOColors.Ink),
-                                        )
-                                    }
-                                }
                                 Dock(
                                     shown,
                                     onLaunch,

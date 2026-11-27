@@ -1,5 +1,6 @@
 package app.darkio.dashboard
 
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.LauncherApps
@@ -9,7 +10,9 @@ import app.darkio.data.AppEntry
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -96,9 +99,9 @@ fun formatLastUsed(
     lastUsedMillis: Long,
     nowMillis: Long = System.currentTimeMillis(),
     zoneId: ZoneId = ZoneId.systemDefault(),
-    neverUsedText: String = "aldrig brugt",
-    yesterdayText: String = "i går",
-    todayFormat: String = "kl. %s",
+    neverUsedText: String,
+    yesterdayText: String,
+    todayFormat: String,
 ): String {
     if (lastUsedMillis <= 0L) return neverUsedText
     val lastUsed = Instant.ofEpochMilli(lastUsedMillis).atZone(zoneId)
@@ -123,14 +126,15 @@ fun formatLastUsedAndToday(
     hasAccess: Boolean,
     nowMillis: Long = System.currentTimeMillis(),
     zoneId: ZoneId = ZoneId.systemDefault(),
-    noAccessText: String = "giv adgang til brugsdata",
-    neverUsedText: String = "aldrig brugt",
-    yesterdayText: String = "i går",
-    todayFormat: String = "kl. %s",
+    noAccessText: String,
+    neverUsedText: String,
+    yesterdayText: String,
+    todayFormat: String,
+    formatDuration: (Long) -> String,
 ): String {
     if (!hasAccess) return noAccessText
     val lastUsedStr = formatLastUsed(lastUsedMillis, nowMillis, zoneId, neverUsedText, yesterdayText, todayFormat)
-    val todayStr = formatScreenTime(todayMillis)
+    val todayStr = formatDuration(todayMillis)
     return "$lastUsedStr · $todayStr"
 }
 
@@ -140,10 +144,11 @@ fun formatLastUsedAndToday(
 fun formatAiTodayHeader(
     totalTodayMillis: Long,
     hasAccess: Boolean,
-    noAccessText: String = "giv adgang til brugsdata",
+    noAccessText: String,
+    formatDuration: (Long) -> String,
 ): String {
     if (!hasAccess) return noAccessText
-    return formatScreenTime(totalTodayMillis)
+    return formatDuration(totalTodayMillis)
 }
 
 /**
@@ -178,7 +183,81 @@ suspend fun queryAiShortcuts(
 }
 
 /**
+ * Beregner (sidst brugt, tid i dag) for [packages] ud fra dagens fokus-hændelser og
+ * historisk `lastTimeUsed` uden et ekstra opslag for i dag.
+ */
+fun calculateAiUsageFromTodayEvents(
+    packages: List<String>,
+    todayEvents: List<FocusUsageEvent>,
+    startTodayMillis: Long,
+    endTodayMillis: Long,
+    recentLastUsedMillis: Map<String, Long> = emptyMap(),
+    excludedPackage: String? = null,
+): Map<String, Pair<Long, Long>> {
+    if (packages.isEmpty()) return emptyMap()
+    val todayUsageByPkg = calculateUsageMillisByPackage(
+        events = todayEvents,
+        startTimeMillis = startTodayMillis,
+        endTimeMillis = endTodayMillis,
+        excludedPackage = excludedPackage,
+    )
+    val todayLastUsedByPkg = todayEvents
+        .asSequence()
+        .filter {
+            it.packageName.isNotEmpty() &&
+                it.timestampMillis in startTodayMillis..endTodayMillis &&
+                (it.eventType == UsageEvents.Event.ACTIVITY_RESUMED || it.eventType == UsageEvents.Event.ACTIVITY_PAUSED)
+        }
+        .groupBy { it.packageName }
+        .mapValues { (_, evs) -> evs.maxOf { it.timestampMillis } }
+
+    return packages.associateWith { pkg ->
+        val todayMillis = todayUsageByPkg[pkg] ?: 0L
+        val lastUsed = maxOf(recentLastUsedMillis[pkg] ?: 0L, todayLastUsedByPkg[pkg] ?: 0L)
+        lastUsed to todayMillis
+    }
+}
+
+/**
+ * Testbar hjælper der genbruger dagens fokus-cache til "tid i dag" pr. AI-app
+ * og kun laver ét 30-dages opslag for `lastTimeUsed`.
+ */
+suspend fun queryAiUsageStatsWithSources(
+    packages: List<String>,
+    now: Instant,
+    zoneId: ZoneId,
+    excludedPackage: String?,
+    cache: FocusUsageMemoryCache = sharedFocusUsageCache,
+    queryEvents: suspend (startMs: Long, endMs: Long) -> List<FocusUsageEvent>,
+    queryRecentLastUsed: suspend (startMs: Long, endMs: Long) -> Map<String, Long>,
+): Map<String, Pair<Long, Long>> {
+    if (packages.isEmpty()) return emptyMap()
+    val (startToday, endToday) = dayFocusTimeRange(now, zoneId)
+    val startTodayMs = startToday.toEpochMilli()
+    val endTodayMs = endToday.toEpochMilli()
+    val todayEvents = cache.getOrQueryTodayEvents(
+        now = now,
+        zoneId = zoneId,
+        excludedPackage = excludedPackage,
+        startTodayMs = startTodayMs,
+        endTodayMs = endTodayMs,
+        queryEvents = queryEvents,
+    )
+    val thirtyDaysAgo = now.minus(30, ChronoUnit.DAYS).toEpochMilli()
+    val recentLastUsed = queryRecentLastUsed(thirtyDaysAgo, endTodayMs)
+    return calculateAiUsageFromTodayEvents(
+        packages = packages,
+        todayEvents = todayEvents,
+        startTodayMillis = startTodayMs,
+        endTodayMillis = endTodayMs,
+        recentLastUsedMillis = recentLastUsed,
+        excludedPackage = excludedPackage,
+    )
+}
+
+/**
  * Henter brugsstatistik for AI-apps fra UsageStatsManager på Dispatchers.IO.
+ * Genbruger dagens delte fokus-hændelser til "tid i dag" og nøjes med ét 30-dages opslag til sidst brugt.
  * Returnerer et map fra packageName til Pair(lastTimeUsedMillis, todayUsageMillis).
  */
 suspend fun queryAiUsageStats(
@@ -187,18 +266,24 @@ suspend fun queryAiUsageStats(
     now: Instant = Instant.now(),
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): Map<String, Pair<Long, Long>> = withContext(Dispatchers.IO) {
+    if (packages.isEmpty()) return@withContext emptyMap()
     val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
         ?: return@withContext emptyMap()
-    val (startToday, endToday) = dayFocusTimeRange(now, zoneId)
-    val thirtyDaysAgo = now.minus(30, java.time.temporal.ChronoUnit.DAYS).toEpochMilli()
     try {
-        val todayStats = usageStatsManager.queryAndAggregateUsageStats(startToday.toEpochMilli(), endToday.toEpochMilli())
-        val recentStats = usageStatsManager.queryAndAggregateUsageStats(thirtyDaysAgo, endToday.toEpochMilli())
-        packages.associateWith { pkg ->
-            val todayMillis = todayStats[pkg]?.totalTimeInForeground ?: 0L
-            val lastUsed = recentStats[pkg]?.lastTimeUsed ?: todayStats[pkg]?.lastTimeUsed ?: 0L
-            lastUsed to todayMillis
-        }
+        queryAiUsageStatsWithSources(
+            packages = packages,
+            now = now,
+            zoneId = zoneId,
+            excludedPackage = context.packageName,
+            cache = sharedFocusUsageCache,
+            queryEvents = { startMs, endMs -> queryUsageEventsList(usageStatsManager, startMs, endMs) },
+            queryRecentLastUsed = { startMs, endMs ->
+                usageStatsManager.queryAndAggregateUsageStats(startMs, endMs)
+                    .mapValues { (_, stats) -> stats.lastTimeUsed }
+            },
+        )
+    } catch (e: CancellationException) {
+        throw e
     } catch (_: Throwable) {
         emptyMap()
     }

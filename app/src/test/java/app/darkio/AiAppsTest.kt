@@ -1,17 +1,24 @@
 package app.darkio
 
+import android.app.usage.UsageEvents
 import app.darkio.dashboard.AiAppCardData
 import app.darkio.dashboard.AiShortcut
+import app.darkio.dashboard.FocusUsageEvent
+import app.darkio.dashboard.FocusUsageMemoryCache
 import app.darkio.dashboard.filterAiApps
 import app.darkio.dashboard.findLatestConversation
 import app.darkio.dashboard.formatAiTodayHeader
 import app.darkio.dashboard.formatLastUsed
 import app.darkio.dashboard.formatLastUsedAndToday
+import app.darkio.dashboard.formatScreenTime
+import app.darkio.dashboard.queryAiUsageStatsWithSources
+import app.darkio.dashboard.queryFocusDataWithSource
 import app.darkio.dashboard.selectShortcutButtons
 import app.darkio.dashboard.sumTodayAiUsage
 import app.darkio.data.AppEntry
 import java.time.LocalDateTime
 import java.time.ZoneId
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -111,6 +118,11 @@ class AiAppsTest {
     fun formattingOfLastUsedAndTodayUsageHandlesAccessAndDates() {
         val now = instant(16, 15, 0)
         val nowMillis = now.toEpochMilli()
+        val formatDuration: (Long) -> String = { ms -> formatScreenTime(ms, "%1\$d t %2\$d m", "%1\$d t", "%1\$d m") }
+        val noAccessText = "giv adgang til brugsdata"
+        val neverUsedText = "aldrig brugt"
+        val yesterdayText = "i går"
+        val todayFormat = "kl. %s"
 
         // Uden adgang til brugsdata
         val noAccess = formatLastUsedAndToday(
@@ -119,15 +131,20 @@ class AiAppsTest {
             hasAccess = false,
             nowMillis = nowMillis,
             zoneId = zone,
+            noAccessText = noAccessText,
+            neverUsedText = neverUsedText,
+            yesterdayText = yesterdayText,
+            todayFormat = todayFormat,
+            formatDuration = formatDuration,
         )
         assertEquals("giv adgang til brugsdata", noAccess)
 
         // Overskrift uden adgang
-        val headerNoAccess = formatAiTodayHeader(1800_000L, hasAccess = false)
+        val headerNoAccess = formatAiTodayHeader(1800_000L, hasAccess = false, noAccessText = noAccessText, formatDuration = formatDuration)
         assertEquals("giv adgang til brugsdata", headerNoAccess)
 
         // Overskrift med adgang
-        val headerWithAccess = formatAiTodayHeader(70 * 60 * 1000L, hasAccess = true)
+        val headerWithAccess = formatAiTodayHeader(70 * 60 * 1000L, hasAccess = true, noAccessText = noAccessText, formatDuration = formatDuration)
         assertEquals("1 t 10 m", headerWithAccess)
 
         // Brugt i dag kl. 14:15, forbrug 25 minutter
@@ -138,6 +155,11 @@ class AiAppsTest {
             hasAccess = true,
             nowMillis = nowMillis,
             zoneId = zone,
+            noAccessText = noAccessText,
+            neverUsedText = neverUsedText,
+            yesterdayText = yesterdayText,
+            todayFormat = todayFormat,
+            formatDuration = formatDuration,
         )
         assertEquals("kl. 14:15 · 25 m", formattedToday)
 
@@ -149,6 +171,11 @@ class AiAppsTest {
             hasAccess = true,
             nowMillis = nowMillis,
             zoneId = zone,
+            noAccessText = noAccessText,
+            neverUsedText = neverUsedText,
+            yesterdayText = yesterdayText,
+            todayFormat = todayFormat,
+            formatDuration = formatDuration,
         )
         assertEquals("i går · 0 m", formattedYesterday)
 
@@ -159,6 +186,11 @@ class AiAppsTest {
             hasAccess = true,
             nowMillis = nowMillis,
             zoneId = zone,
+            noAccessText = noAccessText,
+            neverUsedText = neverUsedText,
+            yesterdayText = yesterdayText,
+            todayFormat = todayFormat,
+            formatDuration = formatDuration,
         )
         assertEquals("aldrig brugt · 0 m", formattedNever)
     }
@@ -167,18 +199,105 @@ class AiAppsTest {
     fun formatLastUsedHandlesDateBoundaries() {
         val now = instant(16, 12, 0)
         val nowMillis = now.toEpochMilli()
+        val neverUsedText = "aldrig brugt"
+        val yesterdayText = "i går"
+        val todayFormat = "kl. %s"
 
         // Samme dag
-        assertEquals("kl. 09:30", formatLastUsed(instant(16, 9, 30).toEpochMilli(), nowMillis, zone))
+        assertEquals("kl. 09:30", formatLastUsed(instant(16, 9, 30).toEpochMilli(), nowMillis, zone, neverUsedText, yesterdayText, todayFormat))
 
         // I går
-        assertEquals("i går", formatLastUsed(instant(15, 22, 10).toEpochMilli(), nowMillis, zone))
+        assertEquals("i går", formatLastUsed(instant(15, 22, 10).toEpochMilli(), nowMillis, zone, neverUsedText, yesterdayText, todayFormat))
 
         // Tidligere samme år
         val earlierThisYear = instant(10, 10, 0).toEpochMilli()
-        assertEquals("10. nov.", formatLastUsed(earlierThisYear, nowMillis, zone))
+        assertEquals("10. nov.", formatLastUsed(earlierThisYear, nowMillis, zone, neverUsedText, yesterdayText, todayFormat))
 
         // Aldrig
-        assertEquals("aldrig brugt", formatLastUsed(0L, nowMillis, zone))
+        assertEquals("aldrig brugt", formatLastUsed(0L, nowMillis, zone, neverUsedText, yesterdayText, todayFormat))
+    }
+
+    @Test
+    fun aiUsageReusesTodayFocusCacheWithoutExtraTodayQuery() = runTest {
+        val cache = FocusUsageMemoryCache()
+        val eventQueries = mutableListOf<Pair<Long, Long>>()
+        val recentQueries = mutableListOf<Pair<Long, Long>>()
+
+        val nowFocus = instant(16, 15, 0)
+        val nowBuild = instant(16, 15, 0).plusSeconds(20)
+        val geminiThreeDaysAgo = instant(13, 18, 0).toEpochMilli()
+
+        val events = listOf(
+            // Claude: 25 min i dag
+            FocusUsageEvent(instant(16, 10, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "com.anthropic.claude"),
+            FocusUsageEvent(instant(16, 10, 25).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "com.anthropic.claude"),
+            // ChatGPT: 10 min i dag
+            FocusUsageEvent(instant(16, 11, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "com.openai.chatgpt"),
+            FocusUsageEvent(instant(16, 11, 10).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "com.openai.chatgpt"),
+            // Anden app: 30 min i dag (må ikke tælle med i AI)
+            FocusUsageEvent(instant(16, 12, 0).toEpochMilli(), UsageEvents.Event.ACTIVITY_RESUMED, "app.browser"),
+            FocusUsageEvent(instant(16, 12, 30).toEpochMilli(), UsageEvents.Event.ACTIVITY_PAUSED, "app.browser"),
+        )
+
+        val eventSource: suspend (Long, Long) -> List<FocusUsageEvent> = { startMs, endMs ->
+            eventQueries.add(startMs to endMs)
+            events.filter { it.timestampMillis in startMs..endMs }
+        }
+
+        // Fokus-kortet henter dagens (og gårsdagens) hændelser
+        queryFocusDataWithSource(
+            now = nowFocus,
+            zoneId = zone,
+            excludedPackage = "app.darkio",
+            includeDetails = false,
+            cache = cache,
+            queryEvents = eventSource,
+        )
+        assertEquals(2, eventQueries.size)
+
+        // Byg-siden henter AI-brugsdata i samme minut: må IKKE lave et nyt dagens event-opslag
+        val usageMap = queryAiUsageStatsWithSources(
+            packages = listOf("com.anthropic.claude", "com.openai.chatgpt", "com.google.android.apps.bard"),
+            now = nowBuild,
+            zoneId = zone,
+            excludedPackage = "app.darkio",
+            cache = cache,
+            queryEvents = eventSource,
+            queryRecentLastUsed = { startMs, endMs ->
+                recentQueries.add(startMs to endMs)
+                mapOf("com.google.android.apps.bard" to geminiThreeDaysAgo)
+            },
+        )
+
+        // 0 ekstra event-opslag, kun 1 30-dages opslag til sidst brugt
+        assertEquals(2, eventQueries.size)
+        assertEquals(1, recentQueries.size)
+        assertEquals(nowBuild.minus(30, java.time.temporal.ChronoUnit.DAYS).toEpochMilli(), recentQueries[0].first)
+        assertEquals(nowBuild.toEpochMilli(), recentQueries[0].second)
+
+        assertEquals(instant(16, 10, 25).toEpochMilli() to 25 * 60_000L, usageMap["com.anthropic.claude"])
+        assertEquals(instant(16, 11, 10).toEpochMilli() to 10 * 60_000L, usageMap["com.openai.chatgpt"])
+        assertEquals(geminiThreeDaysAgo to 0L, usageMap["com.google.android.apps.bard"])
+    }
+
+    @Test
+    fun aiUsageSkipsQueriesWhenPackageListIsEmpty() = runTest {
+        val cache = FocusUsageMemoryCache()
+        var eventQueries = 0
+        var recentQueries = 0
+
+        val result = queryAiUsageStatsWithSources(
+            packages = emptyList(),
+            now = instant(16, 15, 0),
+            zoneId = zone,
+            excludedPackage = "app.darkio",
+            cache = cache,
+            queryEvents = { _, _ -> eventQueries++; emptyList() },
+            queryRecentLastUsed = { _, _ -> recentQueries++; emptyMap() },
+        )
+
+        assertEquals(emptyMap<String, Pair<Long, Long>>(), result)
+        assertEquals(0, eventQueries)
+        assertEquals(0, recentQueries)
     }
 }
