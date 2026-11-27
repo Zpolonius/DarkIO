@@ -180,14 +180,29 @@ class AppChoiceDbTest {
         dao.setFavoriteSlots(listOf(AppChoice("p", "p.Main", 0, favoriteSlot = 2)))
         db.workouts().insertCompleted(app.darkio.data.WorkoutRecord("2026-11-13"))
         db.workouts().upsert(app.darkio.data.WorkoutDay(1, "mandag", "løb"))
+        dao.addMediaApp("m", "m.Main", 0)
 
         db.resetAll()
 
         assertEquals(emptyList<AppChoice>(), dao.all().first())
         assertEquals(emptyList<app.darkio.data.PageShortcut>(), dao.shortcuts().first())
+        assertEquals(emptyList<app.darkio.data.MediaApp>(), dao.mediaApps().first())
         assertEquals(emptyList<String>(), db.workouts().getCompletedDates())
         val days = db.workouts().getAllWorkouts()
         assertEquals(listOf(2, 4, 7), days.map { it.dayOfWeek })
         assertEquals(listOf(null, null, null), days.map { it.completedDate })
+    }
+
+    @Test
+    fun mediaAppsAreAppendedInOrderRemovedAndNeverDuplicated() = runBlocking {
+        dao.addMediaApp("a", "a.Main", 0)
+        dao.addMediaApp("b", "b.Main", 0)
+        dao.addMediaApp("a", "a.Main", 0)
+        dao.addMediaApp("a", "a.Main", 10)
+        assertEquals(listOf("a" to 0L, "b" to 0L, "a" to 10L), dao.mediaApps().first().sortedBy { it.position }.map { it.packageName to it.userSerial })
+        dao.removeMediaApp("b", "b.Main", 0)
+        dao.addMediaApp("c", "c.Main", 0)
+        assertEquals(listOf("a", "a", "c"), dao.mediaApps().first().sortedBy { it.position }.map { it.packageName })
+        assertEquals(emptyList<AppChoice>(), dao.all().first())
     }
 }

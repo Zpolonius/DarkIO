@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -35,6 +37,15 @@ data class PageShortcut(
     val activity: String,
     val userSerial: Long,
     val slot: Int,
+)
+
+/** Medie-app valgt af brugeren; [position] er rækkefølgen på medier-siden. Rækken slettes når appen fjernes fra siden. */
+@Entity(tableName = "media_app", primaryKeys = ["packageName", "activity", "userSerial"])
+data class MediaApp(
+    val packageName: String,
+    val activity: String,
+    val userSerial: Long,
+    val position: Int,
 )
 
 @Dao
@@ -79,6 +90,27 @@ abstract class AppChoiceDao {
         upsertShortcuts(set)
     }
 
+    @Query("SELECT * FROM media_app")
+    abstract fun mediaApps(): Flow<List<MediaApp>>
+
+    @Query("SELECT COALESCE(MAX(position) + 1, 0) FROM media_app")
+    protected abstract suspend fun nextMediaPosition(): Int
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun insertMediaApp(app: MediaApp)
+
+    /** Lægger appen sidst i medie-listen; er den der allerede, ændres intet. */
+    @Transaction
+    open suspend fun addMediaApp(packageName: String, activity: String, userSerial: Long) {
+        insertMediaApp(MediaApp(packageName, activity, userSerial, nextMediaPosition()))
+    }
+
+    @Query("DELETE FROM media_app WHERE packageName = :packageName AND activity = :activity AND userSerial = :userSerial")
+    abstract suspend fun removeMediaApp(packageName: String, activity: String, userSerial: Long)
+
+    @Query("DELETE FROM media_app")
+    abstract suspend fun clearAllMediaApps()
+
     @Query("DELETE FROM app_choice")
     abstract suspend fun clearAllChoices()
 
@@ -99,7 +131,14 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-@Database(entities = [AppChoice::class, PageShortcut::class, WorkoutDay::class, WorkoutRecord::class], version = 5, exportSchema = true)
+/** Version 6 tilføjer media_app (medier-siden). Kun CREATE TABLE; ingen eksisterende tabeller eller rækker røres. */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `media_app` (`packageName` TEXT NOT NULL, `activity` TEXT NOT NULL, `userSerial` INTEGER NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`packageName`, `activity`, `userSerial`))")
+    }
+}
+
+@Database(entities = [AppChoice::class, PageShortcut::class, MediaApp::class, WorkoutDay::class, WorkoutRecord::class], version = 6, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun choices(): AppChoiceDao
     abstract fun workouts(): WorkoutDao
@@ -108,6 +147,7 @@ abstract class AppDatabase : RoomDatabase() {
     open suspend fun resetAll() {
         choices().clearAllChoices()
         choices().clearAllShortcuts()
+        choices().clearAllMediaApps()
         workouts().clearAllRecords()
         workouts().clearAllDays()
         seedWorkoutDays(openHelper.writableDatabase)
@@ -119,7 +159,7 @@ abstract class AppDatabase : RoomDatabase() {
         /** Én database pr. proces, så rotation ikke åbner en ny hver gang. */
         fun open(context: Context): AppDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "darkio.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
