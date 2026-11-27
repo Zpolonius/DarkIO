@@ -4,6 +4,7 @@
     <string name="page_today">i dag</string>
     <string name="page_training">træning</string>
     <string name="page_build">byg</string>
+    <string name="page_media">medier</string>
     <string name="welcome_prompt">darkio --hej</string>
     <string name="hint_swipe_up">// swipe op for alle apps</string>
     <string name="settings_title">Indstillinger</string>
@@ -87,6 +88,8 @@
     <string name="menu_unfavorite">Fjern favorit</string>
     <string name="menu_shortcut">Genvej på siden</string>
     <string name="menu_unshortcut">Fjern genvej fra siden</string>
+    <string name="menu_media">Føj til medier</string>
+    <string name="menu_unmedia">Fjern fra medier</string>
     <string name="shortcuts_full">Rækken har fire genveje. Fjern en genvej eller vis en skjult app igen.</string>
     <string name="dock_label">Dock</string>
     <string name="shortcuts_label">Genvejsrække</string>
@@ -251,4 +254,15 @@
         <item>Fejlfinding er en kunstart — tag den med ro</item>
         <item>Nyd processen og glæd dig over fungerende kode</item>
     </string-array>
+    <string name="media_now_playing">Spiller nu</string>
+    <string name="media_idle">Intet spiller lige nu</string>
+    <string name="media_grant_access">Giv adgang</string>
+    <string name="media_no_access">Giv adgang for at se og styre det, der spiller</string>
+    <string name="media_previous">Forrige</string>
+    <string name="media_play">Afspil</string>
+    <string name="media_pause">Pause</string>
+    <string name="media_next">Næste</string>
+    <string name="media_apps_label">Dine medie-apps</string>
+    <string name="media_apps_empty">Ingen medie-apps endnu</string>
+    <string name="media_add_app">Tilføj medie-app</string>
 </resources>

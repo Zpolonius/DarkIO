@@ -50,6 +50,8 @@ fun AppMenuSheet(
     onToggleFavorite: () -> Unit,
     isShortcut: Boolean,
     onToggleShortcut: () -> Unit,
+    isMedia: Boolean,
+    onToggleMedia: () -> Unit,
     onHide: () -> Unit,
     onSetCategory: (AppCategory) -> Unit,
     onAppInfo: () -> Unit,
@@ -89,6 +91,7 @@ fun AppMenuSheet(
             } else {
                 MenuRow(stringResource(if (isFavorite) R.string.menu_unfavorite else R.string.menu_favorite), DarkIOColors.Ink, Modifier.testTag("menuFavorite"), onToggleFavorite)
                 MenuRow(stringResource(if (isShortcut) R.string.menu_unshortcut else R.string.menu_shortcut), DarkIOColors.Ink, Modifier.testTag("menuShortcut"), onToggleShortcut)
+                MenuRow(stringResource(if (isMedia) R.string.menu_unmedia else R.string.menu_media), DarkIOColors.Ink, Modifier.testTag("menuMedia"), onToggleMedia)
                 MenuRow(stringResource(R.string.menu_hide), DarkIOColors.Ink, Modifier.testTag("menuHide"), onHide)
                 MenuRow(stringResource(R.string.menu_move_category), DarkIOColors.Ink, Modifier.testTag("menuMoveCategory")) { pickingCategory = true }
                 MenuRow(stringResource(R.string.menu_app_info), DarkIOColors.Ink, Modifier.testTag("menuAppInfo"), onAppInfo)

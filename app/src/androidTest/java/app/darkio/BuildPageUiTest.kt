@@ -4,6 +4,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -68,7 +69,8 @@ class BuildPageUiTest {
         rule.onNodeWithTag("buildTodayTip", useUnmergedTree = true).assertIsDisplayed()
 
         // Side 3 har ingen genvejsrække
-        rule.onNodeWithTag("shortcuts").assertDoesNotExist()
+        // Medier-siden ligger forud-komponeret ved siden af, så rækken findes, men må ikke være synlig
+        rule.onNodeWithTag("shortcuts").assertIsNotDisplayed()
     }
 
     @Test

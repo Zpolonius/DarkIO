@@ -7,6 +7,7 @@ import app.darkio.data.MIGRATION_1_2
 import app.darkio.data.MIGRATION_2_3
 import app.darkio.data.MIGRATION_3_4
 import app.darkio.data.MIGRATION_4_5
+import app.darkio.data.MIGRATION_5_6
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -204,5 +205,40 @@ class MigrationTest {
         db.query("SELECT date FROM workout_record ORDER BY date").use {
             assertEquals(listOf("2026-11-05", "2026-11-10"), generateSequence { if (it.moveToNext()) it.getString(0) else null }.toList())
         }
+    }
+
+    @Test
+    fun migrate5To6AddsEmptyMediaAppAndKeepsEveryExistingRow() {
+        helper.createDatabase("migration-test-5-6", 5).apply {
+            execSQL("INSERT INTO app_choice VALUES ('fav','fav.Main',0,0,NULL,2)")
+            execSQL("INSERT INTO app_choice VALUES ('hid','hid.Main',0,1,'spil',NULL)")
+            execSQL("INSERT INTO page_shortcut VALUES (1,'shortcut','shortcut.Main',0,3)")
+            execSQL("INSERT INTO page_shortcut VALUES (-1,'work','work.Main',0,0)")
+            execSQL("INSERT INTO workout_day VALUES (2, 'tirsdag: løb', 'løb', '2026-11-10', 8)")
+            execSQL("INSERT INTO workout_record VALUES ('2026-11-10')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate("migration-test-5-6", 6, true, MIGRATION_5_6)
+        db.query("SELECT COUNT(*) FROM media_app").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+        db.query("SELECT packageName, hidden, customCategory, favoriteSlot FROM app_choice ORDER BY packageName").use {
+            val rows = generateSequence { if (it.moveToNext()) listOf(it.getString(0), it.getInt(1), it.getString(2), if (it.isNull(3)) null else it.getInt(3)) else null }.toList()
+            assertEquals(listOf(listOf("fav", 0, null, 2), listOf("hid", 1, "spil", null)), rows)
+        }
+        db.query("SELECT page, packageName, slot FROM page_shortcut ORDER BY page").use {
+            val rows = generateSequence { if (it.moveToNext()) listOf(it.getInt(0), it.getString(1), it.getInt(2)) else null }.toList()
+            assertEquals(listOf(listOf(-1, "work", 0), listOf(1, "shortcut", 3)), rows)
+        }
+        db.query("SELECT dayOfWeek, completedDate, rpe FROM workout_day").use {
+            it.moveToFirst()
+            assertEquals(listOf(2, "2026-11-10", 8), listOf(it.getInt(0), it.getString(1), it.getInt(2)))
+        }
+        db.query("SELECT date FROM workout_record").use {
+            it.moveToFirst()
+            assertEquals("2026-11-10", it.getString(0))
+        }
+        db.execSQL("INSERT INTO media_app VALUES ('m','m.Main',0,0)")
     }
 }

@@ -35,6 +35,7 @@ fun buildAppLists(
     installed: List<AppEntry>,
     choices: List<AppChoice>,
     shortcuts: List<PageShortcut>,
+    mediaRows: List<MediaApp> = emptyList(),
 ): AppLists {
     val installedIds = installed.map { it.id }.toSet()
     fun AppChoice.id() = appId(packageName, activity, userSerial)
@@ -43,16 +44,20 @@ fun buildAppLists(
     val slots = validChoices.filter { it.favoriteSlot != null }.associate { it.id() to it.favoriteSlot!! }
     val validShortcuts = shortcuts.filter { appId(it.packageName, it.activity, it.userSerial) in installedIds }
     val shortcutPages = (0 until PAGE_COUNT) + WORK_SHORTCUTS_PAGE
-    return splitApps(withCustomCategories(installed, custom), validChoices.filter { it.hidden }.map { it.id() }.toSet())
-        .copy(favoriteSlots = slots, shortcutSlots = shortcutPages.associateWith { shortcutSlotsOnPage(validShortcuts, it) })
+    val split = splitApps(withCustomCategories(installed, custom), validChoices.filter { it.hidden }.map { it.id() }.toSet())
+    return split.copy(
+        favoriteSlots = slots,
+        shortcutSlots = shortcutPages.associateWith { shortcutSlotsOnPage(validShortcuts, it) },
+        mediaApps = mediaAppList(split.visible, mediaRows),
+    )
 }
 
 class AppRepository(private val context: Context, private val scope: CoroutineScope, private val choices: AppChoiceDao) {
     private val launcherApps = context.getSystemService(LauncherApps::class.java)
     private val userManager = context.getSystemService(UserManager::class.java)
     private val installed = MutableStateFlow<List<AppEntry>>(emptyList())
-    val lists: StateFlow<AppLists> = combine(installed, choices.all(), choices.shortcuts()) { apps, rows, shortcuts ->
-        buildAppLists(apps, rows, shortcuts)
+    val lists: StateFlow<AppLists> = combine(installed, choices.all(), choices.shortcuts(), choices.mediaApps()) { apps, rows, shortcuts, media ->
+        buildAppLists(apps, rows, shortcuts, media)
     }
         .stateIn(scope, SharingStarted.Eagerly, AppLists(emptyList(), emptyList()))
     private var job: Job? = null
@@ -105,6 +110,16 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
                 PageShortcut(page, name.packageName, name.className, userManager.getSerialNumberForUser(info.user), slot ?: -1)
             }
             choices.setShortcuts(rows.filter { it.slot >= 0 }, rows.filter { it.slot < 0 })
+        }
+    }
+
+    /** Tilføjer appen sidst på medier-siden, eller fjerner den ([add] = false). */
+    fun setMediaApp(app: AppEntry, add: Boolean) {
+        val info = app.info ?: return
+        scope.launch(Dispatchers.IO) {
+            val name = info.componentName
+            val serial = userManager.getSerialNumberForUser(info.user)
+            if (add) choices.addMediaApp(name.packageName, name.className, serial) else choices.removeMediaApp(name.packageName, name.className, serial)
         }
     }
 
