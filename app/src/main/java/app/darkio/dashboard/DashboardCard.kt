@@ -34,6 +34,7 @@ import app.darkio.ui.theme.DarkIOShapes
 import app.darkio.ui.theme.DarkIOSize
 import app.darkio.ui.theme.DarkIOSpace
 import app.darkio.ui.theme.DarkIOType
+import java.time.LocalDate
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
 
@@ -43,6 +44,32 @@ sealed interface CardState<out T> {
     data object NeedsAccess : CardState<Nothing>
     data object Error : CardState<Nothing>
 }
+
+/**
+ * Kortenes sidste indhold, kun i hukommelsen (N5) og kun som værdier, aldrig Context/Activity (N2).
+ * Hver værdi hører til den dag, den blev hentet; en værdi fra en anden dag returneres aldrig.
+ * Fejl og manglende adgang huskes ikke, så de hverken skjuler friske data eller smitter andre kort (N3).
+ */
+class CardCache {
+    private class Entry(val content: CardState.Content<*>, val day: LocalDate)
+
+    private val entries = HashMap<String, Entry>()
+
+    @Synchronized
+    fun put(key: String, state: CardState<*>, today: LocalDate) {
+        if (state is CardState.Content) entries[key] = Entry(state, today)
+    }
+
+    @Synchronized
+    fun clear() = entries.clear()
+
+    @Suppress("UNCHECKED_CAST")
+    @Synchronized
+    fun <T> get(key: String, today: LocalDate): CardState.Content<T>? =
+        entries[key]?.takeIf { it.day == today }?.content as CardState.Content<T>?
+}
+
+val dashboardCardCache = CardCache()
 
 /** Kører [load]; en fejl bliver til [CardState.Error] så resten af skærmen er upåvirket. Annullering forplanter sig. */
 suspend fun <T> loadCard(load: suspend () -> CardState<T>): CardState<T> =
@@ -57,6 +84,8 @@ suspend fun <T> loadCard(load: suspend () -> CardState<T>): CardState<T> =
 /**
  * Kort med fælles ramme. Data hentes kun mens hjemskærmen er synlig (STARTED); der kører intet, når den er skjult (N10).
  * Er [refreshAfterMs] sat, hentes der igen efter så mange ms, så længe skærmen er synlig.
+ * Med [cacheKey] vises kortets sidste indhold fra i dag straks, til frisk data erstatter det; [today] kan udskiftes i tests.
+ * Med [initial] tegnes kortet synkront i første frame uden indlæsningstilstand.
  */
 @Composable
 fun <T> LoadedCard(
@@ -68,9 +97,16 @@ fun <T> LoadedCard(
     needsAccessExplanation: String? = null,
     reloadTrigger: Any? = null,
     verticalPadding: Dp = DarkIOSpace.S4,
+    cacheKey: String? = null,
+    today: () -> LocalDate = LocalDate::now,
+    initial: (() -> CardState<T>)? = null,
     content: @Composable (T) -> Unit,
 ) {
-    var state by remember { mutableStateOf<CardState<T>?>(null) }
+    var state by remember {
+        mutableStateOf<CardState<T>?>(
+            initial?.invoke() ?: cacheKey?.let { dashboardCardCache.get<T>(it, today()) },
+        )
+    }
     var attempt by remember { mutableIntStateOf(0) }
     val currentLoad by rememberUpdatedState(load)
     val currentRefresh by rememberUpdatedState(refreshAfterMs)
@@ -78,7 +114,10 @@ fun <T> LoadedCard(
     LaunchedEffect(attempt, reloadTrigger) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                state = loadCard(currentLoad)
+                val day = today() // dagen før hentningen, så en hentning over midnat ikke mærkes som i dag
+                val fresh = loadCard(currentLoad)
+                if (cacheKey != null) dashboardCardCache.put(cacheKey, fresh, day)
+                state = fresh
                 delay(currentRefresh?.invoke() ?: break)
             }
         }

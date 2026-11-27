@@ -265,6 +265,8 @@ fun CalendarCard(
         },
         modifier = modifier,
         refreshAfterMs = { millisToNextMinute(LocalDateTime.now()) },
+        cacheKey = "calendar_$isWorkHours",
+        today = { Instant.ofEpochMilli(nowMillis()).atZone(ZoneId.systemDefault()).toLocalDate() },
         reloadTrigger = permissionAttempt,
         onGrantAccess = { launcher.launch(Manifest.permission.READ_CALENDAR) },
         needsAccessTitle = stringResource(R.string.calendar_grant_access_title),

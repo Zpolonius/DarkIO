@@ -260,7 +260,8 @@ fun HomeScreen(
             val pageBottomPadding = bottomHeight + shortcutsHeight + DarkIOSpace.S4 + DarkIOSize.PageDotHitHeight + DarkIOSpace.S3
             HorizontalPager(
                 pager,
-                Modifier
+                beyondViewportPageCount = 1,
+                modifier = Modifier
                     .fillMaxSize()
                     .testTag("homePager")
                     .then(if (drawerOpen || mediaPickerOpen || query.isNotBlank()) Modifier.clearAndSetSemantics {} else Modifier),
@@ -268,7 +269,8 @@ fun HomeScreen(
                 val effectivePage = if (p == 0 && isWorkHours) WORK_SHORTCUTS_PAGE else p
                 val slots = apps.shortcutSlots[effectivePage].orEmpty()
                 val shown = remember(apps.visible, slots) { dockSlots(apps.visible, slots) }
-                Box(Modifier.fillMaxSize()) {
+                // Forudkomponerede naboer er ikke synlige: de skjules for tilgængelighed (og for semantik-baserede tests), til de vises.
+                Box(Modifier.fillMaxSize().then(if (p != pager.currentPage) Modifier.clearAndSetSemantics {} else Modifier)) {
                     // Bag kort og genveje: langt tryk på tom flade åbner Indstillinger (F11).
                     Box(Modifier.fillMaxSize().pointerInput(canOpenSettings) { detectTapGestures(onLongPress = { if (canOpenSettings) settingsOpen = true }) })
                     Box(Modifier.fillMaxSize().padding(bottom = pageBottomPadding), contentAlignment = Alignment.Center) {
