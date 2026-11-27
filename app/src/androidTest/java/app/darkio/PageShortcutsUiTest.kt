@@ -4,7 +4,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -85,7 +84,7 @@ class PageShortcutsUiTest {
         rule.onNodeWithTag("shortcuts_${id("Bravo")}").assertIsDisplayed()
         goTo(2)
         rule.onNodeWithTag("shortcuts_${id("Alfa")}").assertDoesNotExist()
-        rule.onNodeWithTag("shortcuts").assertIsNotDisplayed() // medier-siden er forud-komponeret ved siden af
+        rule.onNodeWithTag("shortcuts").assertDoesNotExist() // nabosidernes rækker er forudkomponeret, men skjult for semantikken
         goTo(0)
         rule.onNodeWithTag("shortcuts_${id("Bravo")}").assertDoesNotExist()
     }
