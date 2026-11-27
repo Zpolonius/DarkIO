@@ -62,6 +62,7 @@ import app.darkio.dashboard.CaloriesCard
 import app.darkio.dashboard.ClockCard
 import app.darkio.dashboard.DeviceCalendar
 import app.darkio.dashboard.FocusCard
+import app.darkio.dashboard.MediaPage
 import app.darkio.dashboard.StepsCard
 import app.darkio.dashboard.TipCard
 import app.darkio.dashboard.WorkoutCard
@@ -71,6 +72,8 @@ import app.darkio.data.AppEntry
 import app.darkio.data.AppLists
 import app.darkio.data.BedtimeSummary
 import app.darkio.data.HomeCard
+import app.darkio.data.MEDIA_PAGE
+import app.darkio.data.MediaNow
 import app.darkio.data.Settings
 import app.darkio.data.WORK_SHORTCUTS_PAGE
 import app.darkio.data.dockSlots
@@ -130,6 +133,9 @@ fun HomeScreen(
     interruptionFilterProvider: (() -> Int)? = null,
     bedtimeDataOverride: BedtimeSummary? = null,
     onOpenBedtimeSettings: (() -> Unit)? = null,
+    onToggleMedia: (AppEntry, Boolean) -> Unit = { _, _ -> },
+    mediaOverride: MediaNow? = null,
+    onGrantMediaAccess: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var resumeTick by remember { mutableIntStateOf(0) }
@@ -155,7 +161,7 @@ fun HomeScreen(
     }
     val effectiveBedtimeData = bedtimeDataOverride ?: bedtimeSummary ?: BedtimeSummary()
 
-    val pageLabels = listOf(R.string.page_today, R.string.page_training, R.string.page_build).map { stringResource(it) }
+    val pageLabels = listOf(R.string.page_today, R.string.page_training, R.string.page_build, R.string.page_media).map { stringResource(it) }
     val pager = rememberPagerState { pageLabels.size }
     val scope = rememberCoroutineScope()
     // Hjem-knappen (ny MAIN/HOME-intent) vender altid tilbage til side 1.
@@ -166,6 +172,7 @@ fun HomeScreen(
         if (!hintSeen) onHintSeen()
         drawerOpen = true
     }
+    var mediaPickerOpen by rememberSaveable { mutableStateOf(false) }
     var hiddenOpen by rememberSaveable { mutableStateOf(false) }
     var workoutOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
@@ -199,6 +206,7 @@ fun HomeScreen(
     BackHandler(enabled = hiddenOpen) { hiddenOpen = false }
     BackHandler(enabled = workoutOpen) { workoutOpen = false }
     BackHandler(enabled = menuApp != null) { menuAppId = null }
+    BackHandler(enabled = mediaPickerOpen) { mediaPickerOpen = false }
     // Skuffen og hjem komponeres ikke bag skærmen, så tryk og TalkBack ikke når dem.
     if (hiddenOpen) {
         HiddenAppsScreen(apps.hidden, onShowAgain = { onSetHidden(it, false) })
@@ -224,7 +232,7 @@ fun HomeScreen(
         )
         return
     }
-    val canOpenSettings = !drawerOpen && query.isEmpty() && menuApp == null
+    val canOpenSettings = !drawerOpen && !mediaPickerOpen && query.isEmpty() && menuApp == null
     val swipePx = with(LocalDensity.current) { DarkIOSize.TouchMin.toPx() }
     val motion = tween<IntOffset>(DarkIOMotion.DrawerMs)
     val fade = tween<Float>(DarkIOMotion.DrawerMs)
@@ -255,7 +263,7 @@ fun HomeScreen(
                 Modifier
                     .fillMaxSize()
                     .testTag("homePager")
-                    .then(if (drawerOpen || query.isNotBlank()) Modifier.clearAndSetSemantics {} else Modifier),
+                    .then(if (drawerOpen || mediaPickerOpen || query.isNotBlank()) Modifier.clearAndSetSemantics {} else Modifier),
             ) { p ->
                 val effectivePage = if (p == 0 && isWorkHours) WORK_SHORTCUTS_PAGE else p
                 val slots = apps.shortcutSlots[effectivePage].orEmpty()
@@ -330,9 +338,19 @@ fun HomeScreen(
                                 apps = apps.visible,
                                 onLaunch = onLaunch,
                             )
+                        } else if (p == MEDIA_PAGE) {
+                            MediaPage(
+                                apps = apps.mediaApps,
+                                onLaunch = onLaunch,
+                                onMenu = { menuAppId = it.id },
+                                onAdd = { mediaPickerOpen = true },
+                                nowOverride = mediaOverride,
+                                onGrantAccess = onGrantMediaAccess,
+                            )
                         }
                         // Fast plads over sideprikkerne; på glas, så den kan læses på lyse billeder (N8).
-                        Row(
+                        // Medier-siden har brug for pladsen nederst (F15) og viser sit eget navn øverst.
+                        if (p != MEDIA_PAGE) Row(
                             modifier = Modifier.align(Alignment.BottomCenter),
                             horizontalArrangement = Arrangement.spacedBy(DarkIOSpace.S2),
                             verticalAlignment = Alignment.CenterVertically,
@@ -496,6 +514,16 @@ fun HomeScreen(
                 modifier = Modifier.imePadding().heightIn(max = maxHeight * DarkIOSize.DrawerMaxFraction),
             )
         }
+        if (mediaPickerOpen) {
+            // Samme app-skuffe som hjemmets, men et tryk vælger appen til medier i stedet for at starte den.
+            AppDrawer(
+                apps = apps.visible.filter { app -> apps.mediaApps.none { it.id == app.id } },
+                onLaunch = { onToggleMedia(it, true); mediaPickerOpen = false },
+                onMenu = {},
+                onDismiss = { mediaPickerOpen = false },
+                modifier = Modifier.align(Alignment.BottomCenter).imePadding().heightIn(max = maxHeight * DarkIOSize.DrawerMaxFraction).testTag("mediaPicker"),
+            )
+        }
         if (menuApp != null) {
             val close = { menuAppId = null }
             val menuShortcutPage = if (page == 0 && isWorkHours) WORK_SHORTCUTS_PAGE else page
@@ -510,6 +538,11 @@ fun HomeScreen(
                     if (dock.any { it?.id == menuApp.id }) onSetFavorites(listOf(menuApp to null))
                     else if (slot != null) onSetFavorites(listOf(menuApp to slot))
                     else dockFull = true
+                    close()
+                },
+                isMedia = apps.mediaApps.any { it.id == menuApp.id },
+                onToggleMedia = {
+                    onToggleMedia(menuApp, apps.mediaApps.none { it.id == menuApp.id })
                     close()
                 },
                 isShortcut = menuRow.any { it?.id == menuApp.id },

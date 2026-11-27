@@ -109,6 +109,7 @@ class MainActivity : ComponentActivity() {
                 onSetHidden = apps::setHidden,
                 onSetFavorites = apps::setFavoriteSlots,
                 onSetShortcuts = apps::setShortcutSlots,
+                onToggleMedia = apps::setMediaApp,
                 onSetCategory = apps::setCategory,
                 onAppInfo = apps::openAppInfo,
                 onUninstall = apps::uninstall,

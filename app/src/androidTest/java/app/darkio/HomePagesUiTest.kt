@@ -23,7 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
-/** F20, F11, F15: tre sider med sideprikker over en fast dock. */
+/** F20, F11, F15: fire sider med sideprikker over en fast dock. */
 class HomePagesUiTest {
     @get:Rule
     val rule = createComposeRule()
@@ -44,12 +44,12 @@ class HomePagesUiTest {
         }
     }
 
-    private fun assertOnlySelected(page: Int) = (0..2).forEach {
+    private fun assertOnlySelected(page: Int) = (0..3).forEach {
         if (it == page) rule.onNodeWithTag("pageDot$it").assertIsSelected() else rule.onNodeWithTag("pageDot$it").assertIsNotSelected()
     }
 
     @Test
-    fun startsOnTodayWithThreeDots() {
+    fun startsOnTodayWithFourDots() {
         show()
         rule.onNodeWithTag("page0").assertIsDisplayed()
         assertOnlySelected(0)

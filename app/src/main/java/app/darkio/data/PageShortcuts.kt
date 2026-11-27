@@ -1,6 +1,9 @@
 package app.darkio.data
 
-const val PAGE_COUNT = 3
+const val PAGE_COUNT = 4
+
+/** Medier-siden er side 3 (efter i dag, træning, byg). */
+const val MEDIA_PAGE = 3
 
 /** Side-id for arbejdsrækken (-1 så de 3 personlige sider 0..2 ikke berøres). */
 const val WORK_SHORTCUTS_PAGE = -1
